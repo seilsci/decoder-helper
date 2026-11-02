@@ -154,7 +154,7 @@ function render(){
  let m;
  const lr=play?lastReal():null;
  const nt=(lr&&lr.k=='f'&&vanN()>0)?`<div class="nt">${t.vn}</div>`:'';
- if(!play)m=brk(t.tip0)+`<div class="st">${t.st||L.en.st}</div>`+W();
+ if(!play)m=brk(t.tip0)+`<div class="st">${(t.st||L.en.st).replace(/([.。])\s*/,'$1<br>')}</div>`+W();
  else if(S.busy)m=t.calc;
  else if(S.imp)m=F(t[{many:'need4',noplace:'nopl',fin3:'fin3'}[S.imp.k]]||L.en[{many:'need4',noplace:'nopl',fin3:'fin3'}[S.imp.k]],{n:S.imp.n})+(CF.length?`<div class="nt2">${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'');
  else if(found().length==3)m=t.done;
