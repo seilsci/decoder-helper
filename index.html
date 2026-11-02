@@ -53,19 +53,19 @@ function load(){try{const v=localStorage.getItem('dh_lang');if(v&&L[v])return v}
 function save(){try{localStorage.setItem('dh_lang',S.lang)}catch(e){}}
 
 let S;
-function init(){S={lang:S?S.lang:load(),ov:false,mode:'setup',tool:'x',xs:new Set(),hs:new Set(),bs:new Set(),fs:new Set(),obs:[],n0:0,rec:null,sel:null}}
+function init(){S={lang:S?S.lang:load(),ov:false,mode:'setup',tool:'x',xs:new Set(),hs:new Set(),bs:new Set(),os:new Set(),fs:new Set(),obs:[],n0:0,rec:null,sel:null}}
 init();
 
 const found=()=>S.obs.filter(o=>o.k=='f').map(o=>o.i);
-function opened(){const s=new Set(S.xs);S.obs.forEach(o=>{s.add(o.i);if(o.k=='b')NB[o.i].forEach(j=>s.add(j))});return s}
+function opened(){const s=new Set([...S.xs,...S.os]);S.obs.forEach(o=>{s.add(o.i);if(o.k=='b')NB[o.i].forEach(j=>s.add(j))});return s}
 function ok(t,o){const hit=t.includes(o.i);if(o.k=='f')return hit;if(hit)return false;
  const near=NB[o.i].some(j=>t.includes(j)&&!o.F.includes(j));return(o.k=='h'||o.h)?near:!near}
 function eff(){const tg=new Map();S.obs.forEach(o=>{if(o.k=='t')tg.set(o.r,!tg.get(o.r))});
  return S.obs.filter(o=>o.k!='t').map(o=>o.k=='r'&&tg.get(o)?{...o,h:!o.h}:o)}
-function cands(E){E=E||eff();return T.filter(t=>!t.some(i=>S.xs.has(i))&&E.every(o=>ok(t,o)))}
+function cands(E){E=E||eff();return T.filter(t=>!t.some(i=>S.xs.has(i)||S.os.has(i))&&E.every(o=>ok(t,o)))}
 function conflict(){
  const E=eff();let bestV=null;
- for(const t of T){if(t.some(i=>S.xs.has(i)))continue;
+ for(const t of T){if(t.some(i=>S.xs.has(i)||S.os.has(i)))continue;
   const v=E.filter(o=>!ok(t,o));
   if(!bestV||v.length<bestV.length){bestV=v;if(!v.length)break}}
  return bestV?[...new Set(bestV.map(o=>o.i))]:[]}
@@ -126,7 +126,7 @@ function state(i){
   return'c'}
  const o=S.obs.find(o=>o.i==i);
  if(o){if(o.k=='f')return'f';if(o.k=='h'){let r=null;eff().forEach(x=>{if(x.k=='r'&&x.i==i)r=x});return r&&!r.h?'o':'h'}return'o'}
- return S.obs.some(o=>o.k=='b'&&NB[o.i].includes(i))?'o':'c'}
+ return S.os.has(i)||S.obs.some(o=>o.k=='b'&&NB[o.i].includes(i))?'o':'c'}
 
 function vanN(){
  return S.obs.filter(o=>o.k=='h'&&state(o.i)=='o'&&lastR(o.i)).length}
@@ -188,7 +188,7 @@ function impossible(){
  const F=found(),E=eff().filter(o=>o.k=='h'||(o.k=='r'&&o.h));
  const mk=new Set(S.obs.filter(o=>o.k=='b'||o.k=='h').map(o=>o.i));
  const need=E.filter(o=>!NB[o.i].some(j=>F.includes(j)&&!o.F.includes(j)));
- const opts=o=>NB[o.i].filter(j=>!S.xs.has(j)&&!F.includes(j)&&!mk.has(j)&&!o.F.includes(j));
+ const opts=o=>NB[o.i].filter(j=>!S.xs.has(j)&&!S.os.has(j)&&!F.includes(j)&&!mk.has(j)&&!o.F.includes(j));
  const nop=need.filter(o=>!opts(o).length);
  if(nop.length)return{k:'noplace',cells:[...new Set(nop.map(o=>o.i))]};
  const ch=new Set();
@@ -201,7 +201,7 @@ function fallback(){
  const cl=(S.cl||[]).filter(i=>!S.xs.has(i)&&!S.obs.some(o=>o.i==i));
  if(cl.length&&cl.length<=3-F.length)return{i:cl[0],p:1,sure:true};
  const E=eff();let bv=1e9,cnt=new Map(),n=0;
- for(const t of T){if(t.some(i=>S.xs.has(i))||!F.every(i=>t.includes(i)))continue;
+ for(const t of T){if(t.some(i=>S.xs.has(i)||S.os.has(i))||!F.every(i=>t.includes(i)))continue;
   const v=E.filter(o=>!ok(t,o)).length;
   if(v>bv)continue;
   if(v<bv){bv=v;cnt=new Map();n=0}
@@ -221,7 +221,7 @@ function act(a){
  else if(a.startsWith('T:'))S.tool=a.slice(2);
  else if(a.startsWith('L:')){S.lang=a.slice(2);S.ov=false;save()}
  else if(a=='hint'){
-  if(S.mode=='setup'){S.cl=C.map((_,i)=>i).filter(i=>state(i)=='c');const F0=[...S.fs];S.obs=F0.map(i=>({i,k:'f',F:[]})).concat([...S.hs].map(i=>({i,k:'h',F:F0})),[...S.bs].map(i=>({i,k:'b',F:F0})));S.n0=S.obs.length;S.mode='play'}
+  if(S.mode=='setup'){S.cl=C.map((_,i)=>i).filter(i=>state(i)=='c');const F0=[...S.fs];S.os=new Set(S.bs);S.obs=F0.map(i=>({i,k:'f',F:[]})).concat([...S.hs].map(i=>({i,k:'h',F:F0})));S.n0=S.obs.length;S.mode='play'}
   hint()}
  else if(a=='undo'){
   if(S.mode=='play'){if(S.obs.length>S.n0)undoObs();else{S.obs=[];S.mode='setup'}}
