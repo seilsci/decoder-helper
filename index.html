@@ -18,6 +18,7 @@ svg{width:100%;height:auto;display:block;touch-action:manipulation}
 polygon{stroke:#15120c;stroke-width:1.5;cursor:pointer}
 #msg{min-height:4.6em;background:#1f1a10;border-radius:10px;padding:10px 12px}
 #msg .row{margin:8px 0 0}
+#msg .nt2{margin-top:8px}
 #msg .nt{margin-top:6px;color:#a39880;font-size:13px}
 small{color:#a39880}
 @keyframes pu{50%{stroke-opacity:.25}}
@@ -148,7 +149,7 @@ function render(){
  else if(found().length==3)m=t.done;
  else if(S.sel!=null){const q=C[S.sel];
   m=`<b>${F(t.lab,{r:q.r+1,c:q.c+1})}</b> — ?<div class="row"><button data-a="b">${t.b}</button><button data-a="h">${t.h}</button><button class="p" data-a="f">${t.f}</button><button data-a="cancel">✕</button></div>`}
- else if(S.rec!=null&&S.rec>=0){const q=C[S.rec];m=F(t.rec,{c:F(t.lab,{r:q.r+1,c:q.c+1}),p:Math.round(A.p[S.rec]*100)})+nt}
+ else if(S.rec!=null&&S.rec>=0){const q=C[S.rec];m=F(t.rec,{c:F(t.lab,{r:q.r+1,c:q.c+1}),p:Math.round(A.p[S.rec]*100)})+nt+(nt?'':`<div class="nt2">${brk(t.tip1.replace(/^[^.。]*[.。]\s*/,''))}</div>`)}
  else m=brk(t.tip1)+nt;
  msg.innerHTML=m;
  cn.textContent=play?F(t.n,{a:S.obs.filter(o=>'bhf'.includes(o.k)&&!o.manual).length-S.n0,b:found().length}):'';
@@ -170,6 +171,7 @@ function tap(i){
   else if(s=='h'&&S.obs.some(o=>o.i==i&&o.manual)){
    S.obs=S.obs.filter(o=>!(o.i==i&&(o.manual||o.k=='r'))&&!(o.k=='t'&&o.r&&o.r.i==i));S.rec=null}
   else if(s=='c')S.sel=i}}
+function hint(){S.sel=null;S.rec=null;S.busy=true;setTimeout(()=>{S.rec=deepRec();S.busy=false;render()},40)}
 function act(a){
  if(a=='lang')S.ov=true;
  else if(a=='ovx')S.ov=false;
@@ -177,14 +179,14 @@ function act(a){
  else if(a.startsWith('L:')){S.lang=a.slice(2);S.ov=false;save()}
  else if(a=='hint'){
   if(S.mode=='setup'){const F0=[...S.fs];S.obs=F0.map(i=>({i,k:'f',F:[]})).concat([...S.hs].map(i=>({i,k:'h',F:F0})),[...S.bs].map(i=>({i,k:'b',F:F0})));S.n0=S.obs.length;S.mode='play'}
-  S.sel=null;S.rec=null;S.busy=true;setTimeout(()=>{S.rec=deepRec();S.busy=false;render()},40)}
+  hint()}
  else if(a=='undo'){
   if(S.mode=='play'){if(S.obs.length>S.n0)undoObs();else{S.obs=[];S.mode='setup'}}
   S.rec=null;S.sel=null}
  else if(a=='reset'){const l=S.lang;init();S.lang=l}
  else if(a=='cancel')S.sel=null;
- else if('bhf'.includes(a)&&S.sel!=null){addObs(S.sel,a);S.sel=null;S.rec=null}}
+ else if('bhf'.includes(a)&&S.sel!=null){addObs(S.sel,a);hint()}}
 document.onclick=e=>{if(S.busy)return;const el=e.target.closest('[data-a],[data-i]');if(!el)return;
- if(el.dataset.i!==undefined)tap(+el.dataset.i);else act(el.dataset.a);render()};
+ if(el.dataset.i!==undefined){const n=S.obs.length;tap(+el.dataset.i);if(S.mode=='play'&&S.obs.length!=n)hint()}else act(el.dataset.a);render()};
 render();
 </script></body></html>
