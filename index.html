@@ -122,11 +122,8 @@ function deepRec(){
  const k=3-found().length,N=cf.length;if(!N||!k)return -1;
  return appChoice(cf,F,op,k)}
 
-const XM=(()=>{try{return /[?&]x=1(&|$)/.test(location.search)}catch(e){return false}})();
-/* ---- 완전 탐색 (주소 끝에 ?x=1 을 붙였을 때만, 7번째 클릭부터) ----
-   앞 6번은 기존 추천을 그대로 쓰고, 그 뒤에는 근사 없이 끝까지 계산해 기대 클릭 수가 가장 적은 칸을 고른다.
-   후보가 너무 많거나 계산이 오래 걸리면 그 단계만 기존 추천으로 대신한다. */
-const EX_FROM=6;        /* 이 횟수만큼 누른 뒤(= 7번째 클릭)부터 */
+const XM=(()=>{try{return /[?&]x=6(&|$)/.test(location.search)}catch(e){return false}})();
+const EX_FROM=6;        /* 이 횟수만큼 누른 뒤 부터 */
 const EX_MAXN=36;       /* 후보가 이 개수 이하일 때만 시도 */
 const EX_BUD=2000000;   /* 계산 호출 한도 */
 const EX_MS=8000;       /* 계산 시간 한도(ms) */
