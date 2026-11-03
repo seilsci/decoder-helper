@@ -24,6 +24,7 @@ polygon{stroke:#15120c;stroke-width:1.5;cursor:pointer}
 #msg .nt{margin-top:6px;color:#a39880;font-size:13px}
 small{color:#a39880}
 .lb{white-space:nowrap}
+.xb{display:block;font-size:12px;font-weight:700;color:#22d3ee;letter-spacing:.02em}
 @keyframes pu{50%{stroke-opacity:.25}}
 polygon.rec{stroke:#22d3ee;stroke-width:3.5;animation:pu 1.1s infinite}
 @media (prefers-reduced-motion:reduce){polygon.rec{animation:none}}
@@ -195,7 +196,7 @@ function lastReal(){
 function render(){
  const t=L[S.lang],play=S.mode=='play',A=play?analyze():null;
  document.documentElement.lang=S.lang;
- ti.textContent=t.t;lg.textContent='🌐 '+t.lang;bh.textContent=t.hint;bu.textContent=t.undo;br.textContent=t.reset;
+ ti.innerHTML=(XM?'<span class="xb">7수 완전 탐색 판</span>':'')+t.t;lg.textContent='🌐 '+t.lang;bh.textContent=t.hint;bu.textContent=t.undo;br.textContent=t.reset;
  const pm=A&&A.N?Math.max(...A.p,.01):1;let g='';const CF=(play&&S.imp)?S.imp.cells:(A&&!A.N&&!S.sure)?conflict():[];
  C.forEach((q,i)=>{
   const cx=q.x*40+20,cy=q.r*34.64+23,s=st=state(i),sw=21.4,w=18.6;
