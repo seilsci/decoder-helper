@@ -14,6 +14,7 @@ button.p{background:#ffb300;color:#1a1300;font-weight:700}
 .row{display:flex;gap:8px;margin:10px 0}
 .row button{flex:1}
 .row button.p{flex:2}
+.row.eq button,.row.eq button.p{flex:1 1 0;min-width:0}
 svg{width:100%;height:auto;display:block;touch-action:manipulation}
 polygon{stroke:#15120c;stroke-width:1.5;cursor:pointer}
 #msg{min-height:4.6em;background:#1f1a10;border-radius:10px;padding:10px 12px}
@@ -36,7 +37,7 @@ html[lang=ko] #msg{word-break:keep-all}#msg{overflow-wrap:break-word}
 <header><h1 id="ti"></h1><button data-a="lang" id="lg"></button></header>
 <svg id="bd" viewBox="0 0 360 186"></svg>
 <div class="row" id="tl"></div>
-<div class="row"><button class="p" data-a="hint" id="bh"></button><button data-a="undo" id="bu"></button><button data-a="reset" id="br"></button></div>
+<div class="row eq"><button class="p" data-a="hint" id="bh"></button><button data-a="undo" id="bu"></button><button data-a="reset" id="br"></button></div>
 <div id="msg"></div>
 <p><small id="cn"></small></p>
 </main>
@@ -214,7 +215,7 @@ function render(){
  const nt='';
  if(!play)m=brk(t.tip0)+`<div class="st">${(t.st||L.en.st).replace(/([.。।])\s*/,'$1<br>')}</div>`+W();
  else if(S.busy)m=t.calc;
- else if(PQ.length)m=`<b>${LB(t,PQ[0])}</b> — ${t.qn||L.en.qn}<div class="row"><button data-a="Q:b">${t.b}</button><button class="p" data-a="Q:h">${t.h}</button></div>`;
+ else if(PQ.length)m=`<b>${LB(t,PQ[0])}</b> — ${t.qn||L.en.qn}<div class="row eq"><button data-a="Q:b">${t.b}</button><button class="p" data-a="Q:h">${t.h}</button></div>`;
  else if(S.imp)m=F(t[{many:'need4',noplace:'nopl',fin3:'fin3'}[S.imp.k]]||L.en[{many:'need4',noplace:'nopl',fin3:'fin3'}[S.imp.k]],{n:S.imp.n})+(CF.length?`<div class="nt2">${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'');
  else if(found().length==3)m=t.done;
  else if(S.sel!=null){const q=C[S.sel];
