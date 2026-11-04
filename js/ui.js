@@ -1,14 +1,60 @@
 /* 화면 / 입력 — 상태(S), 그리기(render), 탭·버튼 처리, 시작 코드. 마지막에 render()로 시작 */
+/* 언어 검색용 국가 코드: 언어코드 -> [ISO alpha-2, alpha-3, 숫자]. 언어 추가할 때 여기도 같이 추가 */
+const LC={
+ ko:['KR','KOR','410'],
+ ja:['JP','JPN','392'],
+ zh:['CN','CHN','156'],
+ 'zh-TW':['TW','TWN','158','HK','HKG','344'],
+ id:['ID','IDN','360'],
+ vi:['VN','VNM','704'],
+ th:['TH','THA','764'],
+ hi:['IN','IND','356'],
+ ar:['SA','SAU','682','EG','EGY','818','AE','ARE','784'],
+ tr:['TR','TUR','792'],
+ en:['GB','GBR','826','US','USA','840','AU','AUS','036','CA','CAN','124'],
+ de:['DE','DEU','276','AT','AUT','040','CH','CHE','756'],
+ fr:['FR','FRA','250','BE','BEL','056'],
+ it:['IT','ITA','380'],
+ pl:['PL','POL','616'],
+ ru:['RU','RUS','643'],
+ es:['ES','ESP','724','MX','MEX','484'],
+ pt:['PT','PRT','620','BR','BRA','076']
+};
+if(typeof LC2!=='undefined')for(const k in LC2)LC[k]=(LC[k]||[]).concat(LC2[k]); /* lang2.js의 추가 코드 이어 붙이기 */
+const RTL=['ar','he','fa']; /* 오른쪽→왼쪽 언어: 안내 메시지·하단 카운트 방향 */
+const PG=12; /* 언어 목록 한 페이지에 보여줄 개수 */
 function load(){try{const v=localStorage.getItem('dh_lang');if(v&&L[v])return v}catch(e){}return'ko'}
 function save(){try{localStorage.setItem('dh_lang',S.lang)}catch(e){}}
 let S;
-function init(){S={lang:S?S.lang:load(),ov:false,mode:'setup',tool:'x',xs:new Set(),hs:new Set(),bs:new Set(),os:new Set(),fs:new Set(),obs:[],n0:0,rec:null,sel:null,ex:null}}
+function init(){S={lang:S?S.lang:load(),ov:false,q:'',pg:0,mode:'setup',tool:'x',xs:new Set(),hs:new Set(),bs:new Set(),os:new Set(),fs:new Set(),obs:[],n0:0,rec:null,sel:null,ex:null}}
 init();
 function go(){if(!pend().length)hint()}
+
+/* 언어 목록: 기본 순서(LG 묶음 순서 + 나머지). 검색어가 있으면 일치하는 언어를 맨 위로 */
+function langList(){
+ const used=new Set(LG.flat()),base=LG.flat().concat(Object.keys(L).filter(k=>!used.has(k))).filter(k=>L[k]);
+ const q=S.q.trim().toUpperCase(),ql=S.q.trim().toLowerCase();
+ if(!q)return base;
+ const rk=k=>{const cs=(LC[k]||[]).map(c=>c.toUpperCase());
+  if(cs.includes(q))return 0;
+  if(q.length>=2&&cs.some(c=>c.startsWith(q)))return 1;
+  if(L[k].lang.toLowerCase().includes(ql))return 2;
+  return 9};
+ return base.map((k,i)=>[rk(k),i,k]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]).map(a=>a[2])}
+function buildLg(){
+ ov.innerHTML='<div class="lgl"><div class="lgh">Enter your country code to find your language.<br>e.g. Korean: KR or KOR</div><input id="lq" type="text" placeholder="KR / KOR" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"><div class="lgg" id="lgb"></div><div class="lpg"><button data-a="pg:-1" id="lpp">◀</button><span id="lpi"></span><button data-a="pg:1" id="lpn">▶</button></div></div>'}
+function fillLg(){
+ const a=langList(),P=Math.max(1,Math.ceil(a.length/PG));
+ S.pg=Math.min(Math.max(S.pg,0),P-1);
+ document.getElementById('lgb').innerHTML=a.slice(S.pg*PG,S.pg*PG+PG).map(k=>`<button data-a="L:${k}"${k==S.lang?' class="p"':''}>${L[k].lang}</button>`).join('');
+ document.getElementById('lpi').textContent=(S.pg+1)+' / '+P;
+ document.getElementById('lpp').disabled=S.pg<=0;
+ document.getElementById('lpn').disabled=S.pg>=P-1}
+
 function render(){
  const t=L[S.lang],play=S.mode=='play',A=play?analyze():null,PQ=play?pend():[];
  document.documentElement.lang=S.lang;
- ti.innerHTML=(XM?'<span class="xb">7수 완전 탐색 판</span>':'')+t.t;lg.textContent='🌐 '+t.lang;bh.textContent=t.hint;bu.textContent=t.undo;br.textContent=t.reset;
+ ti.textContent=t.t;lg.textContent='🌐 '+t.lang;bh.textContent=t.hint;bu.textContent=t.undo;br.textContent=t.reset;
  const pm=A&&A.N?Math.max(...A.p,.01):1;let g='';const CF=(play&&S.imp)?S.imp.cells:(A&&!A.N&&!S.sure)?conflict():[];
  C.forEach((q,i)=>{
   const cx=q.x*40+20,cy=q.r*34.64+23,s=st=state(i),sw=21.4,w=18.6;
@@ -34,13 +80,13 @@ function render(){
  else if(A.N==0&&!S.fb)m=brk(t.bad)+(CF.length?`<div class="nt2">${t.badc||L.en.badc}: ${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'')+nt;
  else if(S.rec!=null&&S.rec>=0){const q=C[S.rec];m=F(t.rec,{c:LB(t,S.rec),p:S.fb?Math.round(S.fbp*100):Math.round(A.p[S.rec]*100)})+(S.fb&&!S.sure?`<div class="nt">${t.fbn||L.en.fbn}${CF.length?': '+CF.map(i=>LB(t,i)).join(' · '):''}</div>`:'')+exNote(t)+oops(t)+nt+(nt?'':`<div class="nt2">${brk(t.tip1.replace(/^[^.。।]*[.。।]\s*/,''))}</div>`)}
  else m=brk(t.tip1)+nt;
- msg.innerHTML=m;msg.dir=cn.dir=S.lang=='ar'?'rtl':'ltr';
+ msg.innerHTML=m;msg.dir=cn.dir=RTL.includes(S.lang)?'rtl':'ltr';
  cn.textContent=play?F(t.n,{a:S.obs.filter(o=>'bhf'.includes(o.k)&&!o.manual).length-S.n0,b:found().length}):'';
  tl.hidden=play;
  if(!play)tl.innerHTML=['x','h','b','f'].map(k=>`<button data-a="T:${k}"${S.tool==k?' class="p"':''}>${k=='x'?'✕':k=='h'?'!':k=='b'?'○ '+t.b:'★ '+t.f}</button>`).join('');
  ov.hidden=!S.ov;
- if(S.ov){const used=new Set(LG.flat()),gs=LG.concat([Object.keys(L).filter(k=>!used.has(k))]).map(g=>g.filter(k=>L[k])).filter(g=>g.length);
-  ov.innerHTML='<div class="lgl">'+gs.map(g=>'<div class="lgg">'+g.map(k=>`<button data-a="L:${k}"${k==S.lang?' class="p"':''}>${L[k].lang}</button>`).join('')+'</div>').join('')+'</div>'}
+ if(!S.ov)ov.innerHTML='';
+ else{if(!ov.firstChild)buildLg();fillLg()}
 }
 
 function tap(i){
@@ -65,8 +111,9 @@ function hint(){S.sel=null;S.rec=null;S.fb=false;S.sure=false;S.imp=null;S.ex=nu
  catch(e){console.error(e);S.rec=-1}
  S.busy=false;render()},40)}
 function act(a){
- if(a=='lang')S.ov=true;
+ if(a=='lang'){S.ov=true;S.q='';S.pg=0;ov.innerHTML=''}
  else if(a=='ovx')S.ov=false;
+ else if(a.startsWith('pg:'))S.pg+=+a.slice(3);
  else if(a.startsWith('T:'))S.tool=a.slice(2);
  else if(a.startsWith('L:')){S.lang=a.slice(2);S.ov=false;save()}
  else if(a=='hint'){
@@ -81,5 +128,7 @@ function act(a){
  else if(a.startsWith('Q:')){answer(a=='Q:h');go()}
  else if('bhf'.includes(a)&&S.sel!=null){addObs(S.sel,a);S.sel=null;S.rec=null;go()}}
 document.onclick=e=>{if(S.busy)return;const el=e.target.closest('[data-a],[data-i]');if(!el)return;
+ if(el.id=='ov'&&e.target!==el)return; /* 오버레이 안쪽(입력창·빈 공간) 클릭은 닫지 않음, 어두운 배경만 닫기 */
  if(el.dataset.i!==undefined){const n=S.obs.length;tap(+el.dataset.i);if(S.mode=='play'&&S.obs.length!=n)go()}else act(el.dataset.a);render()};
+document.addEventListener('input',e=>{if(e.target.id=='lq'){S.q=e.target.value;S.pg=0;fillLg()}});
 render();
