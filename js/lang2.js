@@ -1,4 +1,4 @@
-/* 추가 언어 — lang.js 다음, ui.js 앞에 로드. L/OOPS에 언어를 덧붙이고 검색용 국가 코드(LC2)를 정의.
+/* 추가 언어 — lang.js 다음, ui.js 앞에 로드. L/OOPS에 언어를 덧붙이고 검색용 국가 코드(LC2)를 정의해 lang.js의 LC에 이어 붙임.
    세 변수 모두 대표 국가 코드(LC2 첫 번째 값, alpha-2) abc순으로 정렬 — 같으면 언어 코드순.
    언어 추가할 때는 L, OOPS, LC2에 같은 언어를 넣되 위 순서에 맞는 자리에 넣을 것 (L의 순서가 언어 선택 화면의 순서) */
 
@@ -262,7 +262,7 @@ Object.assign(OOPS,{
 "sn":"Kana wadzvanya zvisiri izvo, dzvanya “{u}”."
 });
 
-/* 검색용 국가 코드: [alpha-2, alpha-3, 숫자]. 기존 언어(ko, ar, es, en 등)는 ui.js의 LC에 이어 붙음 */
+/* 검색용 국가 코드: [alpha-2, alpha-3, 숫자]. 기존 언어(ko, ar, es, en 등)는 lang.js의 LC에 이어 붙음 */
 const LC2={
  ca:['AD','AND','020'],
  prs:['AF','AFG','004'],
@@ -394,3 +394,6 @@ const LC2={
  zu:['ZA','ZAF','710'],
  sn:['ZW','ZWE','716']
 };
+
+/* LC2를 LC에 이어 붙이기 */
+for(const k in LC2)LC[k]=(LC[k]||[]).concat(LC2[k]);
