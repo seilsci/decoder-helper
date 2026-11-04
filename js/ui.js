@@ -45,11 +45,11 @@ function buildLg(){
  ov.innerHTML='<div class="lgl"><div class="lgh">Enter your country code to find your language.<br>e.g. Korean: KR or KOR</div><input id="lq" type="text" placeholder="KR / KOR" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"><div class="lgg" id="lgb"></div><div class="lpg"><button data-a="pg:-1" id="lpp">◀</button><span id="lpi"></span><button data-a="pg:1" id="lpn">▶</button></div></div>'}
 function fillLg(){
  const a=langList(),P=Math.max(1,Math.ceil(a.length/PG));
- S.pg=Math.min(Math.max(S.pg,0),P-1);
+ S.pg=((S.pg%P)+P)%P; /* 순환: 1→2→3→1 / 1→3→2→1 */
  document.getElementById('lgb').innerHTML=a.length?a.slice(S.pg*PG,S.pg*PG+PG).map(k=>`<button data-a="L:${k}"${k==S.lang?' class="p"':''}>${L[k].lang}</button>`).join(''):'<div class="lgh" style="grid-column:1/-1">No match</div>';
  document.getElementById('lpi').textContent=(S.pg+1)+' / '+P;
- document.getElementById('lpp').disabled=S.pg<=0;
- document.getElementById('lpn').disabled=S.pg>=P-1}
+ document.getElementById('lpp').disabled=a.length<=PG;
+ document.getElementById('lpn').disabled=a.length<=PG}
 
 function render(){
  const t=L[S.lang],play=S.mode=='play',A=play?analyze():null,PQ=play?pend():[];
@@ -111,7 +111,7 @@ function hint(){S.sel=null;S.rec=null;S.fb=false;S.sure=false;S.imp=null;S.ex=nu
  catch(e){console.error(e);S.rec=-1}
  S.busy=false;render()},40)}
 function act(a){
- if(a=='lang'){S.ov=true;S.q='';S.pg=0;ov.innerHTML=''}
+ if(a=='lang'){S.ov=true;S.q='';S.pg=Math.max(0,Math.floor(langList().indexOf(S.lang)/PG));ov.innerHTML=''}
  else if(a=='ovx')S.ov=false;
  else if(a.startsWith('pg:'))S.pg+=+a.slice(3);
  else if(a.startsWith('T:'))S.tool=a.slice(2);
