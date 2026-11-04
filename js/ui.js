@@ -21,7 +21,7 @@ const LC={
  pt:['PT','PRT','620','BR','BRA','076']
 };
 if(typeof LC2!=='undefined')for(const k in LC2)LC[k]=(LC[k]||[]).concat(LC2[k]); /* lang2.js의 추가 코드 이어 붙이기 */
-const RTL=['ar','he','fa','ur','ps','sd']; /* 오른쪽→왼쪽 언어: 안내 메시지·하단 카운트 방향 */
+const RTL=['ar','he','fa','ur','ps','sd','ckb','ug']; /* 오른쪽→왼쪽 언어: 안내 메시지·하단 카운트 방향 */
 const PG=18; /* 한 페이지 개수: 기존 언어 18개가 1페이지, 추가 언어는 2페이지부터 */
 function load(){try{const v=localStorage.getItem('dh_lang');if(v&&L[v])return v}catch(e){}return'ko'}
 function save(){try{localStorage.setItem('dh_lang',S.lang)}catch(e){}}
