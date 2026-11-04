@@ -61,5 +61,5 @@ const LC2={
  bn:['BD','BGD','050'],
  ar:['IQ','IRQ','368','MA','MAR','504','DZ','DZA','012','JO','JOR','400','KW','KWT','414','QA','QAT','634'],
  es:['CO','COL','170','CL','CHL','152','PE','PER','604'],
- en:['IE','IRL','372','NZ','NZL','554','SG','SGP','702','ZA','ZAF','710']
+ en:['UK','IE','IRL','372','NZ','NZL','554','SG','SGP','702','ZA','ZAF','710']
 };

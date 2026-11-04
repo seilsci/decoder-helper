@@ -40,13 +40,13 @@ function langList(){
   if(q.length>=2&&cs.some(c=>c.startsWith(q)))return 1;
   if(L[k].lang.toLowerCase().includes(ql))return 2;
   return 9};
- return base.map((k,i)=>[rk(k),i,k]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]).map(a=>a[2])}
+ return base.map((k,i)=>[rk(k),i,k]).filter(a=>a[0]<9).sort((a,b)=>a[0]-b[0]||a[1]-b[1]).map(a=>a[2])}
 function buildLg(){
  ov.innerHTML='<div class="lgl"><div class="lgh">Enter your country code to find your language.<br>e.g. Korean: KR or KOR</div><input id="lq" type="text" placeholder="KR / KOR" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"><div class="lgg" id="lgb"></div><div class="lpg"><button data-a="pg:-1" id="lpp">◀</button><span id="lpi"></span><button data-a="pg:1" id="lpn">▶</button></div></div>'}
 function fillLg(){
  const a=langList(),P=Math.max(1,Math.ceil(a.length/PG));
  S.pg=Math.min(Math.max(S.pg,0),P-1);
- document.getElementById('lgb').innerHTML=a.slice(S.pg*PG,S.pg*PG+PG).map(k=>`<button data-a="L:${k}"${k==S.lang?' class="p"':''}>${L[k].lang}</button>`).join('');
+ document.getElementById('lgb').innerHTML=a.length?a.slice(S.pg*PG,S.pg*PG+PG).map(k=>`<button data-a="L:${k}"${k==S.lang?' class="p"':''}>${L[k].lang}</button>`).join(''):'<div class="lgh" style="grid-column:1/-1">No match</div>';
  document.getElementById('lpi').textContent=(S.pg+1)+' / '+P;
  document.getElementById('lpp').disabled=S.pg<=0;
  document.getElementById('lpn').disabled=S.pg>=P-1}
