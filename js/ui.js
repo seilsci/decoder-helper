@@ -21,7 +21,7 @@ const LC={
  pt:['PT','PRT','620','BR','BRA','076']
 };
 if(typeof LC2!=='undefined')for(const k in LC2)LC[k]=(LC[k]||[]).concat(LC2[k]); /* lang2.js의 추가 코드 이어 붙이기 */
-const RTL=['ar','he','fa']; /* 오른쪽→왼쪽 언어: 안내 메시지·하단 카운트 방향 */
+const RTL=['ar','he','fa','ur']; /* 오른쪽→왼쪽 언어: 안내 메시지·하단 카운트 방향 */
 const PG=18; /* 한 페이지 개수: 기존 언어 18개가 1페이지, 추가 언어는 2페이지부터 */
 function load(){try{const v=localStorage.getItem('dh_lang');if(v&&L[v])return v}catch(e){}return'ko'}
 function save(){try{localStorage.setItem('dh_lang',S.lang)}catch(e){}}
@@ -70,7 +70,7 @@ function render(){
  bd.innerHTML=g;
  let m;
  const nt='';
- if(!play)m=brk(t.tip0)+`<div class="st">${(t.st||L.en.st).replace(/([.。।])\s*/,'$1<br>')}</div>`;
+ if(!play)m=brk(t.tip0)+`<div class="st">${(t.st||L.en.st).replace(/([.。।۔။។])\s*/,'$1<br>')}</div>`;
  else if(S.busy)m=t.calc;
  else if(PQ.length)m=`<b>${LB(t,PQ[0])}</b> — ${t.qn||L.en.qn}<div class="row eq"><button data-a="Q:b">${t.b}</button><button class="p" data-a="Q:h">${t.h}</button></div>`+oops(t);
  else if(S.imp)m=F(t[{many:'need4',noplace:'nopl',fin3:'fin3'}[S.imp.k]]||L.en[{many:'need4',noplace:'nopl',fin3:'fin3'}[S.imp.k]],{n:S.imp.n})+(CF.length?`<div class="nt2">${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'');
@@ -78,7 +78,7 @@ function render(){
  else if(S.sel!=null){const q=C[S.sel];
   m=`<b>${LB(t,S.sel)}</b> — ?<div class="row eq"><button data-a="b">${t.b}</button><button data-a="h">${t.h}</button><button class="p" data-a="f">${t.f}</button><button data-a="cancel">✕</button></div>`}
  else if(A.N==0&&!S.fb)m=brk(t.bad)+(CF.length?`<div class="nt2">${t.badc||L.en.badc}: ${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'')+nt;
- else if(S.rec!=null&&S.rec>=0){const q=C[S.rec];m=F(t.rec,{c:LB(t,S.rec),p:S.fb?Math.round(S.fbp*100):Math.round(A.p[S.rec]*100)})+(S.fb&&!S.sure?`<div class="nt">${t.fbn||L.en.fbn}${CF.length?': '+CF.map(i=>LB(t,i)).join(' · '):''}</div>`:'')+exNote(t)+oops(t)+nt+(nt?'':`<div class="nt2">${brk(t.tip1.replace(/^[^.。।]*[.。।]\s*/,''))}</div>`)}
+ else if(S.rec!=null&&S.rec>=0){const q=C[S.rec];m=F(t.rec,{c:LB(t,S.rec),p:S.fb?Math.round(S.fbp*100):Math.round(A.p[S.rec]*100)})+(S.fb&&!S.sure?`<div class="nt">${t.fbn||L.en.fbn}${CF.length?': '+CF.map(i=>LB(t,i)).join(' · '):''}</div>`:'')+exNote(t)+oops(t)+nt+(nt?'':`<div class="nt2">${brk(t.tip1.replace(/^[^.。।]*[.。।۔။។]\s*/,''))}</div>`)}
  else m=brk(t.tip1)+nt;
  msg.innerHTML=m;msg.dir=cn.dir=RTL.includes(S.lang)?'rtl':'ltr';
  cn.textContent=play?F(t.n,{a:S.obs.filter(o=>'bhf'.includes(o.k)&&!o.manual).length-S.n0,b:found().length}):'';
