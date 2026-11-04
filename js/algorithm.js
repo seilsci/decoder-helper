@@ -23,11 +23,15 @@ function addObs(i,k){
  S.obs.push(o);
  if(k=='f'){
   o.q=[...new Set(S.obs.filter(h=>h.k=='h'&&NB[h.i].includes(i)&&state(h.i)=='h').map(h=>h.i))];
-  if(found().length>=3)o.q.forEach(c=>S.obs.push({i:c,k:'r',h:false,F:found(),ans:true,fo:o}))}}
+  if(found().length>=3)o.q.forEach(c=>S.obs.push({i:c,k:'r',h:false,F:found(),ans:true,fo:o}));
+  else if(found().length==2&&o.q.length){/* 당첨 2개 확정 + 남은 당첨이 1곳뿐(100%)이면 ! 질문 생략: 그 칸 이웃이면 ! 유지, 아니면 빈칸으로 자동 전환 */
+   const cf=cands();
+   if(cf.length==1){const x=cf[0].find(i=>!found().includes(i));
+    o.q.forEach(c=>S.obs.push({i:c,k:'r',h:NB[c].includes(x),F:found(),ans:true,auto:true,fo:o}))}}}}
 function qf(){for(let p=S.obs.length-1;p>=0;p--){if(S.obs[p].k=='f'&&S.obs[p].q)return S.obs[p]}return null}
 function pend(){const f=qf();return f?f.q.filter(c=>!S.obs.some(r=>r.k=='r'&&r.fo===f&&r.i==c)):[]}
 function answer(h){const q=pend();if(!q.length)return;S.obs.push({i:q[0],k:'r',h,F:found(),ans:true,fo:qf()})}
-function undoObs(){S.obs.pop()}
+function undoObs(){const o=S.obs.pop();if(o&&o.auto){while(S.obs.length&&S.obs[S.obs.length-1].auto&&S.obs[S.obs.length-1].fo===o.fo)S.obs.pop();S.obs.pop()}}
 function analyze(){
  const cf=cands(),N=cf.length,F=found(),op=opened();
  const ni=Array(42).fill(0),ex=Array(42).fill(0),bl=Array(42).fill(0);
