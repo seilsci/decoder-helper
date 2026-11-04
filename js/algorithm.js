@@ -164,4 +164,10 @@ function openRec(){
  const xk=[...S.xs].sort((a,b)=>a-b).join(',');
  if(!S.obs.length){const r=OPEN1[xk];return r===undefined?null:r}
  if(S.obs.length==1){const o=S.obs[0];if(o.manual||!'bhf'.includes(o.k))return null;const r=OPEN2[xk+'|'+o.i+'|'+o.k];return r===undefined?null:r}
+ if(S.obs.length==2||(S.obs.length==3&&S.obs[2].k=='r'&&S.obs[2].ans)){
+  const o1=S.obs[0],o2=S.obs[1];
+  if(o1.manual||o2.manual||!'bhf'.includes(o1.k)||!'bhf'.includes(o2.k))return null;
+  let key=xk+'|'+o1.i+'|'+o1.k+'|'+o2.i+'|'+o2.k;
+  if(S.obs.length==3)key+='|r'+(S.obs[2].h?1:0);
+  const r=OPEN3[key];return r===undefined?null:r}
  return null}
