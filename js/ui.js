@@ -1,10 +1,32 @@
 /* 화면 / 입력 — 상태(S), 그리기(render), 탭·버튼 처리, 시작 코드. 마지막에 render()로 시작 */
-const RTL=['ar','he','fa','ur','ps','sd','ckb','ug','dv','prs','yi']; /* 오른쪽→왼쪽 언어: 안내 메시지·하단 카운트 방향 */
+/* 언어 검색용 국가 코드: 언어코드 -> [ISO alpha-2, alpha-3, 숫자]. 언어 추가할 때 여기도 같이 추가 */
+const LC={
+ ko:['KR','KOR','410'],
+ ja:['JP','JPN','392'],
+ zh:['CN','CHN','156'],
+ 'zh-TW':['TW','TWN','158','HK','HKG','344'],
+ id:['ID','IDN','360'],
+ vi:['VN','VNM','704'],
+ th:['TH','THA','764'],
+ hi:['IN','IND','356'],
+ ar:['SA','SAU','682','EG','EGY','818','AE','ARE','784'],
+ tr:['TR','TUR','792'],
+ en:['GB','GBR','826','US','USA','840','AU','AUS','036','CA','CAN','124'],
+ de:['DE','DEU','276','AT','AUT','040','CH','CHE','756'],
+ fr:['FR','FRA','250','BE','BEL','056'],
+ it:['IT','ITA','380'],
+ pl:['PL','POL','616'],
+ ru:['RU','RUS','643'],
+ es:['ES','ESP','724','MX','MEX','484'],
+ pt:['PT','PRT','620','BR','BRA','076']
+};
+if(typeof LC2!=='undefined')for(const k in LC2)LC[k]=(LC[k]||[]).concat(LC2[k]); /* lang2.js의 추가 코드 이어 붙이기 */
+const RTL=['ar','he','fa']; /* 오른쪽→왼쪽 언어: 안내 메시지·하단 카운트 방향 */
 const PG=18; /* 한 페이지 개수: 기존 언어 18개가 1페이지, 추가 언어는 2페이지부터 */
 function load(){try{const v=localStorage.getItem('dh_lang');if(v&&L[v])return v}catch(e){}return'ko'}
 function save(){try{localStorage.setItem('dh_lang',S.lang)}catch(e){}}
 let S;
-function init(){S={lang:S?S.lang:load(),ov:false,q:'',pg:0,mode:'setup',tool:'x',xs:new Set(),hs:new Set(),bs:new Set(),os:new Set(),fs:new Set(),obs:[],n0:0,rec:null,sel:null,ex:null}}
+function init(){S={lang:S?S.lang:load(),ov:false,q:'',pg:0,sh:[],mode:'setup',tool:'x',xs:new Set(),hs:new Set(),bs:new Set(),os:new Set(),fs:new Set(),obs:[],n0:0,rec:null,sel:null,ex:null}}
 init();
 function go(){if(!pend().length)hint()}
 
@@ -23,11 +45,11 @@ function buildLg(){
  ov.innerHTML='<div class="lgl"><div class="lgh">Enter your country code to find your language.<br>e.g. Korean: KR or KOR</div><input id="lq" type="text" placeholder="KR / KOR" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"><div class="lgg" id="lgb"></div><div class="lpg"><button data-a="pg:-1" id="lpp">◀</button><span id="lpi"></span><button data-a="pg:1" id="lpn">▶</button></div></div>'}
 function fillLg(){
  const a=langList(),P=Math.max(1,Math.ceil(a.length/PG));
- S.pg=((S.pg%P)+P)%P; /* 순환: 1→2→3→1 / 1→3→2→1 */
+ S.pg=Math.min(Math.max(S.pg,0),P-1);
  document.getElementById('lgb').innerHTML=a.length?a.slice(S.pg*PG,S.pg*PG+PG).map(k=>`<button data-a="L:${k}"${k==S.lang?' class="p"':''}>${L[k].lang}</button>`).join(''):'<div class="lgh" style="grid-column:1/-1">No match</div>';
  document.getElementById('lpi').textContent=(S.pg+1)+' / '+P;
- document.getElementById('lpp').disabled=a.length<=PG;
- document.getElementById('lpn').disabled=a.length<=PG}
+ document.getElementById('lpp').disabled=S.pg<=0;
+ document.getElementById('lpn').disabled=S.pg>=P-1}
 
 function render(){
  const t=L[S.lang],play=S.mode=='play',A=play?analyze():null,PQ=play?pend():[];
@@ -48,7 +70,7 @@ function render(){
  bd.innerHTML=g;
  let m;
  const nt='';
- if(!play)m=brk(t.tip0)+`<div class="st">${(t.st||L.en.st).replace(/([.。।۔။។։።])\s*/,'$1<br>')}</div>`;
+ if(!play)m=brk(t.tip0)+`<div class="st">${(t.st||L.en.st).replace(/([.。।])\s*/,'$1<br>')}</div>`;
  else if(S.busy)m=t.calc;
  else if(PQ.length)m=`<b>${LB(t,PQ[0])}</b> — ${t.qn||L.en.qn}<div class="row eq"><button data-a="Q:b">${t.b}</button><button class="p" data-a="Q:h">${t.h}</button></div>`+oops(t);
  else if(S.imp)m=F(t[{many:'need4',noplace:'nopl',fin3:'fin3'}[S.imp.k]]||L.en[{many:'need4',noplace:'nopl',fin3:'fin3'}[S.imp.k]],{n:S.imp.n})+(CF.length?`<div class="nt2">${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'');
@@ -56,7 +78,7 @@ function render(){
  else if(S.sel!=null){const q=C[S.sel];
   m=`<b>${LB(t,S.sel)}</b> — ?<div class="row eq"><button data-a="b">${t.b}</button><button data-a="h">${t.h}</button><button class="p" data-a="f">${t.f}</button><button data-a="cancel">✕</button></div>`}
  else if(A.N==0&&!S.fb)m=brk(t.bad)+(CF.length?`<div class="nt2">${t.badc||L.en.badc}: ${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'')+nt;
- else if(S.rec!=null&&S.rec>=0){const q=C[S.rec];m=F(t.rec,{c:LB(t,S.rec),p:S.fb?Math.round(S.fbp*100):Math.round(A.p[S.rec]*100)})+(S.fb&&!S.sure?`<div class="nt">${t.fbn||L.en.fbn}${CF.length?': '+CF.map(i=>LB(t,i)).join(' · '):''}</div>`:'')+exNote(t)+oops(t)+nt+(nt?'':`<div class="nt2">${brk(t.tip1.replace(/^[^.。।]*[.。।۔။។։።]\s*/,''))}</div>`)}
+ else if(S.rec!=null&&S.rec>=0){const q=C[S.rec];m=F(t.rec,{c:LB(t,S.rec),p:S.fb?Math.round(S.fbp*100):Math.round(A.p[S.rec]*100)})+(S.fb&&!S.sure?`<div class="nt">${t.fbn||L.en.fbn}${CF.length?': '+CF.map(i=>LB(t,i)).join(' · '):''}</div>`:'')+exNote(t)+oops(t)+nt+(nt?'':`<div class="nt2">${brk(t.tip1.replace(/^[^.。।]*[.。।]\s*/,''))}</div>`)}
  else m=brk(t.tip1)+nt;
  msg.innerHTML=m;msg.dir=cn.dir=RTL.includes(S.lang)?'rtl':'ltr';
  cn.textContent=play?F(t.n,{a:S.obs.filter(o=>'bhf'.includes(o.k)&&!o.manual).length-S.n0,b:found().length}):'';
@@ -73,6 +95,7 @@ function tap(i){
  if(S.mode=='setup'){
   const tl=S.tool,M={x:S.xs,h:S.hs,b:S.bs,f:S.fs},has=M[tl].has(i);
   if(tl=='f'&&!has&&S.fs.size>=3)return;
+  S.sh.push([[...S.xs],[...S.hs],[...S.bs],[...S.fs]]);
   S.xs.delete(i);S.hs.delete(i);S.bs.delete(i);S.fs.delete(i);
   if(!has)M[tl].add(i);
  }else{const s=state(i);
@@ -89,7 +112,7 @@ function hint(){S.sel=null;S.rec=null;S.fb=false;S.sure=false;S.imp=null;S.ex=nu
  catch(e){console.error(e);S.rec=-1}
  S.busy=false;render()},40)}
 function act(a){
- if(a=='lang'){S.ov=true;S.q='';S.pg=Math.max(0,Math.floor(langList().indexOf(S.lang)/PG));ov.innerHTML=''}
+ if(a=='lang'){S.ov=true;S.q='';S.pg=0;ov.innerHTML=''}
  else if(a=='ovx')S.ov=false;
  else if(a.startsWith('pg:'))S.pg+=+a.slice(3);
  else if(a.startsWith('T:'))S.tool=a.slice(2);
@@ -100,6 +123,7 @@ function act(a){
   hint()}
  else if(a=='undo'){
   if(S.mode=='play'){if(S.obs.length>S.n0)undoObs();else{S.obs=[];S.mode='setup'}}
+  else if(S.sh.length){const p=S.sh.pop();S.xs=new Set(p[0]);S.hs=new Set(p[1]);S.bs=new Set(p[2]);S.fs=new Set(p[3])}
   S.rec=null;S.sel=null;S.imp=null;S.ex=null}
  else if(a=='reset'){const l=S.lang;init();S.lang=l}
  else if(a=='cancel')S.sel=null;
