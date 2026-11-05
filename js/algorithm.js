@@ -24,10 +24,11 @@ function addObs(i,k){
  if(k=='f'){
   o.q=[...new Set(S.obs.filter(h=>h.k=='h'&&NB[h.i].includes(i)&&state(h.i)=='h').map(h=>h.i))];
   if(found().length>=3)o.q.forEach(c=>S.obs.push({i:c,k:'r',h:false,F:found(),ans:true,fo:o}));
-  else if(found().length==2&&o.q.length){/* 당첨 2개 확정 + 남은 당첨이 1곳뿐(100%)이면 ! 질문 생략: 그 칸 이웃이면 ! 유지, 아니면 빈칸으로 자동 전환 */
-   const cf=cands();
-   if(cf.length==1){const x=cf[0].find(i=>!found().includes(i));
-    o.q.forEach(c=>S.obs.push({i:c,k:'r',h:NB[c].includes(x),F:found(),ans:true,auto:true,fo:o}))}}}}
+  else if(o.q.length){/* 남은 후보 전부에서 ! 유지 여부가 같으면 질문 생략: 주변에 아직 안 열린 칸이 없어 ! 가 사라질 수밖에 없는 경우 등. 후보마다 갈리는 ! 만 질문 */
+   const cf=cands(),F=found();
+   if(cf.length)o.q.forEach(c=>{
+    const hs=new Set(cf.map(t=>NB[c].some(j=>t.includes(j)&&!F.includes(j))));
+    if(hs.size==1)S.obs.push({i:c,k:'r',h:[...hs][0],F:found(),ans:true,auto:true,fo:o})})}}}
 function qf(){for(let p=S.obs.length-1;p>=0;p--){if(S.obs[p].k=='f'&&S.obs[p].q)return S.obs[p]}return null}
 function pend(){const f=qf();return f?f.q.filter(c=>!S.obs.some(r=>r.k=='r'&&r.fo===f&&r.i==c)):[]}
 function answer(h){const q=pend();if(!q.length)return;S.obs.push({i:q[0],k:'r',h,F:found(),ans:true,fo:qf()})}
