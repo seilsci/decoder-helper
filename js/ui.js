@@ -1,6 +1,6 @@
 /* 화면 / 입력 — 상태(S), 그리기(render), 탭·버튼 처리, 시작 코드. 마지막에 render()로 시작 */
 /* 언어 검색용 국가 코드: 언어코드 -> [ISO alpha-2, alpha-3, 숫자]. 언어 추가할 때 여기도 같이 추가 */
-const LC={
+const LCODES={
  ko:['KR','KOR','410'],
  ja:['JP','JPN','392'],
  zh:['CN','CHN','156'],
@@ -20,9 +20,9 @@ const LC={
  es:['ES','ESP','724','MX','MEX','484'],
  pt:['PT','PRT','620','BR','BRA','076']
 };
-if(typeof LC2!=='undefined')for(const k in LC2)LC[k]=(LC[k]||[]).concat(LC2[k]); /* lang2.js의 추가 코드 이어 붙이기 */
-const RTL=['ar','he','fa']; /* 오른쪽→왼쪽 언어: 안내 메시지·하단 카운트 방향 */
-const PG=18; /* 한 페이지 개수: 기존 언어 18개가 1페이지, 추가 언어는 2페이지부터 */
+if(typeof LC2!=='undefined')for(const k in LC2)LCODES[k]=(LCODES[k]||[]).concat(LC2[k]); /* lang2.js의 추가 코드 이어 붙이기 */
+const LRTL=['ar','he','fa']; /* 오른쪽→왼쪽 언어: 안내 메시지·하단 카운트 방향 */
+const LPG=18; /* 한 페이지 개수: 기존 언어 18개가 1페이지, 추가 언어는 2페이지부터 */
 function load(){try{const v=localStorage.getItem('dh_lang');if(v&&L[v])return v}catch(e){}return'ko'}
 function save(){try{localStorage.setItem('dh_lang',S.lang)}catch(e){}}
 let S;
@@ -35,7 +35,7 @@ function langList(){
  const used=new Set(LG.flat()),base=LG.flat().concat(Object.keys(L).filter(k=>!used.has(k))).filter(k=>L[k]);
  const q=S.q.trim().toUpperCase(),ql=S.q.trim().toLowerCase();
  if(!q)return base;
- const rk=k=>{const cs=(LC[k]||[]).map(c=>c.toUpperCase());
+ const rk=k=>{const cs=(LCODES[k]||[]).map(c=>c.toUpperCase());
   if(cs.includes(q))return 0;
   if(q.length>=2&&cs.some(c=>c.startsWith(q)))return 1;
   if(L[k].lang.toLowerCase().includes(ql))return 2;
@@ -44,9 +44,9 @@ function langList(){
 function buildLg(){
  ov.innerHTML='<div class="lgl"><div class="lgh">Enter your country code to find your language.<br>e.g. Korean: KR or KOR</div><input id="lq" type="text" placeholder="KR / KOR" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"><div class="lgg" id="lgb"></div><div class="lpg"><button data-a="pg:-1" id="lpp">◀</button><span id="lpi"></span><button data-a="pg:1" id="lpn">▶</button></div></div>'}
 function fillLg(){
- const a=langList(),P=Math.max(1,Math.ceil(a.length/PG));
+ const a=langList(),P=Math.max(1,Math.ceil(a.length/LPG));
  S.pg=Math.min(Math.max(S.pg,0),P-1);
- document.getElementById('lgb').innerHTML=a.length?a.slice(S.pg*PG,S.pg*PG+PG).map(k=>`<button data-a="L:${k}"${k==S.lang?' class="p"':''}>${L[k].lang}</button>`).join(''):'<div class="lgh" style="grid-column:1/-1">No match</div>';
+ document.getElementById('lgb').innerHTML=a.length?a.slice(S.pg*LPG,S.pg*LPG+LPG).map(k=>`<button data-a="L:${k}"${k==S.lang?' class="p"':''}>${L[k].lang}</button>`).join(''):'<div class="lgh" style="grid-column:1/-1">No match</div>';
  document.getElementById('lpi').textContent=(S.pg+1)+' / '+P;
  document.getElementById('lpp').disabled=S.pg<=0;
  document.getElementById('lpn').disabled=S.pg>=P-1}
@@ -80,7 +80,7 @@ function render(){
  else if(A.N==0&&!S.fb)m=brk(t.bad)+(CF.length?`<div class="nt2">${t.badc||L.en.badc}: ${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'')+nt;
  else if(S.rec!=null&&S.rec>=0){const q=C[S.rec];m=F(t.rec,{c:LB(t,S.rec),p:S.fb?Math.round(S.fbp*100):Math.round(A.p[S.rec]*100)})+(S.fb&&!S.sure?`<div class="nt">${t.fbn||L.en.fbn}${CF.length?': '+CF.map(i=>LB(t,i)).join(' · '):''}</div>`:'')+exNote(t)+oops(t)+nt+(nt?'':`<div class="nt2">${brk(t.tip1.replace(/^[^.。।]*[.。।]\s*/,''))}</div>`)}
  else m=brk(t.tip1)+nt;
- msg.innerHTML=m;msg.dir=cn.dir=RTL.includes(S.lang)?'rtl':'ltr';
+ msg.innerHTML=m;msg.dir=cn.dir=LRTL.includes(S.lang)?'rtl':'ltr';
  cn.textContent=play?F(t.n,{a:S.obs.filter(o=>'bhf'.includes(o.k)&&!o.manual).length-S.n0,b:found().length}):'';
  tl.hidden=play;
  if(!play)tl.innerHTML=['x','h','b','f'].map(k=>`<button data-a="T:${k}"${S.tool==k?' class="p"':''}>${k=='x'?'✕':k=='h'?'!':k=='b'?'○ '+t.b:'★ '+t.f}</button>`).join('');
