@@ -1,25 +1,6 @@
 /* 화면 / 입력 — 상태(S), 그리기(render), 탭·버튼 처리, 시작 코드. 마지막에 render()로 시작 */
 /* 언어 검색용 국가 코드: 언어코드 -> [ISO alpha-2, alpha-3, 숫자]. 언어 추가할 때 여기도 같이 추가 */
-const LCODES={
- ko:['KR','KOR','410'],
- ja:['JP','JPN','392'],
- zh:['CN','CHN','156'],
- 'zh-TW':['TW','TWN','158','HK','HKG','344'],
- id:['ID','IDN','360'],
- vi:['VN','VNM','704'],
- th:['TH','THA','764'],
- hi:['IN','IND','356'],
- ar:['SA','SAU','682','EG','EGY','818','AE','ARE','784'],
- tr:['TR','TUR','792'],
- en:['GB','GBR','826','US','USA','840','AU','AUS','036','CA','CAN','124'],
- de:['DE','DEU','276','AT','AUT','040','CH','CHE','756'],
- fr:['FR','FRA','250','BE','BEL','056'],
- it:['IT','ITA','380'],
- pl:['PL','POL','616'],
- ru:['RU','RUS','643'],
- es:['ES','ESP','724','MX','MEX','484'],
- pt:['PT','PRT','620','BR','BRA','076']
-};
+const LCODES=(typeof LC!=='undefined')?LC:{}; /* 국가 코드는 lang.js의 LC를 그대로 사용 */
 if(typeof LC2!=='undefined')for(const k in LC2)LCODES[k]=(LCODES[k]||[]).concat(LC2[k]); /* lang2.js의 추가 코드 이어 붙이기 */
 const LRTL=['ar','he','fa']; /* 오른쪽→왼쪽 언어: 안내 메시지·하단 카운트 방향 */
 const LPG=18; /* 한 페이지 개수: 기존 언어 18개가 1페이지, 추가 언어는 2페이지부터 */
