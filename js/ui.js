@@ -52,7 +52,7 @@ function render(){
  bd.innerHTML=g;
  let m;
  const nt='';
- if(!play)m=LBRK(t.tip0)+`<div class="st">${(t.st||L.en.st).replace(/([.。।։።།។။۔])\s*/,'$1<br>')}</div>`;
+ if(!play)m=LBRK(t.tip0)+`<div class="st">${(t.st||L.en.st).replace(/([.。।։።།។။۔])\s*/,'$1<br>')}</div>`+xmNote();
  else if(S.busy)m=t.calc;
  else if(PQ.length)m=`<b>${LB(t,PQ[0])}</b> — ${t.qn||L.en.qn}<div class="row eq"><button data-a="Q:b">${t.b}</button><button class="p" data-a="Q:h">${t.h}</button></div>`+oops(t);
  else if(S.imp)m=F(t[{many:'need4',noplace:'nopl',fin3:'fin3'}[S.imp.k]]||L.en[{many:'need4',noplace:'nopl',fin3:'fin3'}[S.imp.k]],{n:S.imp.n})+(CF.length?`<div class="nt2">${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'');
