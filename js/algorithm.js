@@ -73,10 +73,10 @@ function deepRec(){
  return appChoice(cf,F,op,k)}
 
 const XM=(()=>{try{return /[?&]x=6(&|$)/.test(location.search)}catch(e){return false}})();
-const EX_FROM=6;        /* 이 횟수만큼 누른 뒤 부터 */
-const EX_MAXN=36;       /* 후보가 이 개수 이하일 때만 시도 */
-const EX_BUD=2000000;   /* 계산 호출 한도 */
-const EX_MS=8000;       /* 계산 시간 한도(ms) */
+const EX_FROM=0;        /* 클릭 횟수 조건 없음 */
+const EX_MAXN=30;       /* 후보가 이 개수 이하일 때만 시도 */
+const EX_BUD=Infinity;   /* 계산 호출 한도 없음 */
+const EX_MS=Infinity;   /* 계산 시간 한도 없음 (완전탐색은 x=6일 때만 실행됨) */
 let exCalls=0,exT0=0;const exMemo=new Map();
 const exCode=t=>t[0]*1764+t[1]*42+t[2];
 const exKey=(cf,F,op,H)=>cf.map(exCode).join(',')+'|'+F.join('')+'|'+op.join('')+'|'+H.join(',');
@@ -108,6 +108,7 @@ function exVal(x,cf,F,op,H,k,lim){
 /* 반환: 칸 번호(0~41) / -1 해당 없음 / -2 시간·계산량 초과 / -3 후보가 너무 많음 */
 function exRec(){
  const cf=cands(),N=cf.length,k=3-found().length;
+ if(!XM)return -1; /* x=6 일 때만 완전탐색 */
  if(N<2||k<1)return -1;
  if(N>EX_MAXN)return -3;
  const F=new Uint8Array(42),op=new Uint8Array(42);
