@@ -74,7 +74,7 @@ function deepRec(){
 
 const XM=(()=>{try{return /[?&]x=6(&|$)/.test(location.search)}catch(e){return false}})();
 const EX_FROM=0;        /* 클릭 횟수 조건 없음 */
-const EX_MAXN=30;       /* 살아 있는 칸수(어두운 칸 제외)가 이 개수 이하일 때 완전탐색 */
+const EX_MAXN=25;       /* 살아 있는 칸수(어두운 칸 제외)가 이 개수 이하일 때 완전탐색 */
 const EX_BUD=Infinity;   /* 계산 호출 한도 없음 */
 const EX_MS=Infinity;   /* 계산 시간 한도 없음 (완전탐색은 x=6일 때만 실행됨) */
 let exCalls=0,exT0=0;const exMemo=new Map();
@@ -118,6 +118,8 @@ function exRec(){
  if(exCells(cf)>EX_MAXN)return -3;
  const F=new Uint8Array(42),op=new Uint8Array(42);
  found().forEach(i=>F[i]=1);opened().forEach(i=>op[i]=1);
+ const u0=new Set();cf.forEach(t=>t.forEach(i=>u0.add(i)));
+ for(let i=0;i<42;i++)if(!u0.has(i))op[i]=1; /* 0%인 칸은 열린 칸 취급 */
  const H=C.map((_,i)=>i).filter(i=>state(i)=='h');
  exMemo.clear();exCalls=0;exT0=Date.now();
  try{
