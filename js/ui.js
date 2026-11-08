@@ -53,7 +53,7 @@ function render(){
  let m;
  const nt='';
  if(!play)m=LBRK(t.tip0)+`<div class="st">${(t.st||L.en.st).replace(/([.。।։።།។။۔])\s*/,'$1<br>')}</div>`+xmNote();
- else if(S.busy)m=t.calc;
+ else if(S.busy)m=t.calc+progHtml(t);
  else if(PQ.length)m=`<b>${LB(t,PQ[0])}</b> — ${t.qn||L.en.qn}<div class="row eq"><button data-a="Q:b">${t.b}</button><button class="p" data-a="Q:h">${t.h}</button></div>`+oops(t);
  else if(S.imp)m=F(t[{many:'need4',noplace:'nopl',fin3:'fin3'}[S.imp.k]]||L.en[{many:'need4',noplace:'nopl',fin3:'fin3'}[S.imp.k]],{n:S.imp.n})+(CF.length?`<div class="nt2">${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'');
  else if(found().length==3)m=t.done+oops(t);
@@ -86,14 +86,16 @@ function tap(i){
   else if(s=='h'&&S.obs.some(o=>o.i==i&&o.manual)){
    S.obs=S.obs.filter(o=>!(o.i==i&&(o.manual||o.k=='r'))&&!(o.k=='t'&&o.r&&o.r.i==i));S.rec=null}
   else if(s=='c')S.sel=i}}
-function hint(){S.sel=null;S.rec=null;S.fb=false;S.sure=false;S.imp=null;S.ex=null;S.busy=true;setTimeout(()=>{
+function progHtml(t){return S.prog?`<div class="nt">${F(t.exprog||L.ko.exprog,{a:S.prog.a,b:S.prog.b,c:(S.prog.ms/1000).toFixed(1)})}</div>`:''}
+function hint(){S.sel=null;S.rec=null;S.fb=false;S.sure=false;S.imp=null;S.ex=null;S.prog=null;S.busy=true;setTimeout(()=>{
  let wait=false;
  try{S.rec=openRec();if(S.rec==null)S.rec=deepRec();
   if(found().length>=3){if(!cands().length)S.imp={k:'fin3',cells:visH()}}
   else if(S.rec<0&&!cands().length){S.imp=impossible();const f=S.imp?null:fallback();if(f){S.rec=f.i;S.fb=true;S.fbp=f.p;S.sure=!!f.sure}}
   else if(XM&&S.rec>=0&&clicks()>=EX_FROM){wait=true;
-   exRecPar().then(r=>{if(r>=0){S.rec=r;S.ex='ok'}else if(r==-2)S.ex='fb';else if(r==-3)S.ex='big'})
-    .catch(e=>console.error(e)).then(()=>{S.busy=false;render()})}}
+   exRecPar((a,b,ms)=>{S.prog={a,b,ms};const t=L[S.lang];msg.innerHTML=t.calc+progHtml(t)})
+    .then(r=>{if(r>=0){S.rec=r;S.ex='ok'}else if(r==-2)S.ex='fb';else if(r==-3)S.ex='big'})
+    .catch(e=>console.error(e)).then(()=>{S.prog=null;S.busy=false;render()})}}
  catch(e){console.error(e);S.rec=-1}
  if(!wait){S.busy=false;render()}},40)}
 function act(a){
