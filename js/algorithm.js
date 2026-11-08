@@ -154,7 +154,7 @@ function exPoolGet(){
  const pool=[];for(let i=0;i<n;i++)pool.push(new Worker(url));
  exPool=pool;return pool}
 /* 반환: Promise — exRec()와 같은 값(칸 번호 / -1 / -3). 병렬을 못 쓰면 exSeq로 대체 */
-function exRecPar(){
+function exRecPar(onProg){ /* onProg(끝낸 칸 수, 전체 칸 수, 경과 ms): 진행률 표시용(선택) */
  const p=exPrep();
  if(typeof p=='number')return Promise.resolve(p);
  if(typeof Worker=='undefined'||typeof Blob=='undefined')return Promise.resolve(exSeq(p));
@@ -166,9 +166,10 @@ function exRecPar(){
  const sid=++exSid,fa=Array.from(F),oa=Array.from(op);
  return new Promise(resolve=>{
   let next=0,done=0,lim=1e9,over=false;const res=[];
-  const fail=e=>{if(over)return;over=true;console.error(e);exPool&&exPool.forEach(w=>w.terminate());exPool=null;resolve(exSeq(p))};
+  const t0=Date.now(),prog=()=>{if(onProg)onProg(done,xs.length,Date.now()-t0)},tk=onProg?setInterval(prog,250):0; /* 끝나는 칸이 없어도 경과 시간은 계속 갱신 */
+  const fail=e=>{if(over)return;over=true;clearInterval(tk);console.error(e);exPool&&exPool.forEach(w=>w.terminate());exPool=null;resolve(exSeq(p))};
   const fin=()=>{
-   if(over)return;over=true;
+   if(over)return;over=true;clearInterval(tk);
    res.sort((a,b)=>a.x==xa?-1:b.x==xa?1:a.x-b.x); /* xa 먼저, 나머지는 칸 번호 순 — 순차 탐색과 같은 동점 처리 */
    let bv=1e9,bx=-1;
    for(const m of res)if(bx<0||m.v<bv-1e-9){bv=m.v;bx=m.x}
@@ -177,9 +178,10 @@ function exRecPar(){
   pool.forEach(w=>{
    w.onmessage=e=>{const m=e.data;if(m.sid!==sid||over)return;
     res.push(m);if(m.v<lim)lim=m.v; /* 지금까지의 최선값을 다음 칸 계산의 가지치기 기준으로 사용 */
-    if(++done>=xs.length)fin();else send(w)};
+    if(++done>=xs.length)fin();else{send(w);prog()}};
    w.onerror=fail;
    send(w)});
+  prog();
   if(!xs.length)fin()})}
 function state(i){
  if(S.xs.has(i))return'x';
