@@ -74,12 +74,17 @@ function deepRec(){
 
 const XM=(()=>{try{return /[?&]x=6(&|$)/.test(location.search)}catch(e){return false}})();
 const EX_FROM=0;        /* 클릭 횟수 조건 없음 */
-const EX_MAXN=25;       /* 살아 있는 칸수(어두운 칸 제외)가 이 개수 이하일 때 완전탐색 */
+let EX_MAXN=200;        /* 후보가 이 개수 이하일 때만 완전탐색 (화면 입력칸에서 변경 가능) */
 const EX_BUD=Infinity;   /* 계산 호출 한도 없음 */
 const EX_MS=Infinity;   /* 계산 시간 한도 없음 (완전탐색은 x=6일 때만 실행됨) */
 let exCalls=0,exT0=0;const exMemo=new Map();
 const exCode=t=>t[0]*1764+t[1]*42+t[2];
-const exKey=(cf,F,op,H)=>cf.map(exCode).join(',')+'|'+F.join('')+'|'+op.join('')+'|'+H.join(',');
+function exKey(cf,F,op,H){
+ let h1=5381,h2=52711;
+ for(const t of cf){const c=exCode(t);h1=(Math.imul(h1,33)^c)|0;h2=(Math.imul(h2,31)+c)|0}
+ let o1=0,o2=0,f1=0,f2=0;
+ for(let i=0;i<21;i++){o1|=op[i]<<i;o2|=op[i+21]<<i;f1|=F[i]<<i;f2|=F[i+21]<<i}
+ return h1+','+h2+','+cf.length+','+o1+','+o2+','+f1+','+f2+'|'+H.join(',')}
 function exSig(t,x,F,H){
  const unf=t.filter(a=>!F[a]);
  if(t.includes(x)){let s='f';for(const h of H)s+=unf.some(a=>a!==x&&ADJ[h*42+a])?'1':'0';return s}
@@ -105,18 +110,12 @@ function exVal(x,cf,F,op,H,k,lim){
  let v=1;
  for(const[s,g]of m){const[F2,op2,H2]=exNext(s,x,F,op,H);v+=g.length/cf.length*exV(g,F2,op2,H2,s[0]=='f'?k-1:k);if(v>=lim)return v}
  return v}
-/* 미확정 칸수: 일부 후보에만 나오는 칸(0%<확률<100%). 찾은 ★·100% 확정 칸·0% 칸·!·X·열린 칸은 제외 */
-function exCells(cf){
- const N=cf.length,cnt=new Uint32Array(42),F=found();
- for(const t of cf)for(const i of t)cnt[i]++;
- let n=0;for(let i=0;i<42;i++){if(F.includes(i))continue;if(cnt[i]>0&&cnt[i]<N)n++}
- return n}
-/* 반환: 칸 번호(0~41) / -1 해당 없음 / -2 시간·계산량 초과 / -3 칸수가 너무 많음 */
+/* 반환: 칸 번호(0~41) / -1 해당 없음 / -2 시간·계산량 초과 / -3 후보가 너무 많음 */
 function exRec(){
  const cf=cands(),N=cf.length,k=3-found().length;
  if(!XM)return -1; /* x=6 일 때만 완전탐색 */
  if(N<2||k<1)return -1;
- if(exCells(cf)>EX_MAXN)return -3;
+ if(N>EX_MAXN)return -3;
  const F=new Uint8Array(42),op=new Uint8Array(42);
  found().forEach(i=>F[i]=1);opened().forEach(i=>op[i]=1);
  const c0=new Uint32Array(42);cf.forEach(t=>t.forEach(i=>c0[i]++));
@@ -125,10 +124,10 @@ function exRec(){
  exMemo.clear();exCalls=0;exT0=Date.now();
  try{
   let bs=1e9,bx=-1;
-  for(let x=0;x<42;x++){if(op[x])continue;const v=exVal(x,cf,F,op,H,k,bs);if(v<bs){bs=v;bx=x}}
+  const xa=appChoice(cf,F,op,k); /* 기존 추천을 먼저 계산해 기준으로 삼음(동점이면 기존 추천 유지) */
+  if(xa>=0&&!op[xa]){bs=exVal(xa,cf,F,op,H,k,1e9);bx=xa}
+  for(let x=0;x<42;x++){if(op[x]||x==xa)continue;const v=exVal(x,cf,F,op,H,k,bs);if(v<bs-1e-9){bs=v;bx=x}}
   if(bx<0)return -1;
-  const xa=appChoice(cf,F,op,k); /* 동점이면 기존 추천 유지 */
-  if(xa>=0&&!op[xa]&&exVal(xa,cf,F,op,H,k,1e9)<=bs+1e-9)bx=xa;
   return bx
  }catch(e){if(e.message!=='budget')throw e;return -2}
  finally{exMemo.clear()}}
