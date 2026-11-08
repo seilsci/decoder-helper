@@ -87,12 +87,15 @@ function tap(i){
    S.obs=S.obs.filter(o=>!(o.i==i&&(o.manual||o.k=='r'))&&!(o.k=='t'&&o.r&&o.r.i==i));S.rec=null}
   else if(s=='c')S.sel=i}}
 function hint(){S.sel=null;S.rec=null;S.fb=false;S.sure=false;S.imp=null;S.ex=null;S.busy=true;setTimeout(()=>{
+ let wait=false;
  try{S.rec=openRec();if(S.rec==null)S.rec=deepRec();
   if(found().length>=3){if(!cands().length)S.imp={k:'fin3',cells:visH()}}
   else if(S.rec<0&&!cands().length){S.imp=impossible();const f=S.imp?null:fallback();if(f){S.rec=f.i;S.fb=true;S.fbp=f.p;S.sure=!!f.sure}}
-  else if(XM&&S.rec>=0&&clicks()>=EX_FROM){const r=exRec();if(r>=0){S.rec=r;S.ex='ok'}else if(r==-2)S.ex='fb';else if(r==-3)S.ex='big'}}
+  else if(XM&&S.rec>=0&&clicks()>=EX_FROM){wait=true;
+   exRecPar().then(r=>{if(r>=0){S.rec=r;S.ex='ok'}else if(r==-2)S.ex='fb';else if(r==-3)S.ex='big'})
+    .catch(e=>console.error(e)).then(()=>{S.busy=false;render()})}}
  catch(e){console.error(e);S.rec=-1}
- S.busy=false;render()},40)}
+ if(!wait){S.busy=false;render()}},40)}
 function act(a){
  if(a=='lang'){S.ov=true;S.q='';S.pg=0;ov.innerHTML=''}
  else if(a=='ovx')S.ov=false;
