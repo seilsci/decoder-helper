@@ -105,10 +105,9 @@ function exVal(x,cf,F,op,H,k,lim){
  let v=1;
  for(const[s,g]of m){const[F2,op2,H2]=exNext(s,x,F,op,H);v+=g.length/cf.length*exV(g,F2,op2,H2,s[0]=='f'?k-1:k);if(v>=lim)return v}
  return v}
-/* 살아 있는 칸수: 후보에 한 번이라도 나오는 칸 + 힌트(!/0)가 표시된 칸. X와 어두운 칸(빈칸으로 열린 칸 등)은 제외 */
+/* 살아 있는 칸수: 당첨일 가능성이 있는 칸(후보에 한 번이라도 나오는 칸). !·X·빈칸으로 열린 칸·어두운 칸은 제외 */
 function exCells(cf){
  const u=new Set();cf.forEach(t=>t.forEach(i=>u.add(i)));
- S.obs.forEach(o=>{if(o.k=='f'||o.k=='h')u.add(o.i)});
  return u.size}
 /* 반환: 칸 번호(0~41) / -1 해당 없음 / -2 시간·계산량 초과 / -3 칸수가 너무 많음 */
 function exRec(){
