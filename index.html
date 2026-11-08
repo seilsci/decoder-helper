@@ -4,7 +4,7 @@
 <title>Decoder Helper</title>
 <link rel="stylesheet" href="style.css">
 <script defer src="https://cloud.umami.is/script.js" data-website-id="44adabee-49c9-4046-9626-1d9ad1577cbc"></script></head><body><main>
-<header><h1 id="ti"></h1><button data-a="lang" id="lg"></button></header>
+<header><h1 id="ti"></h1><div style="display:flex;align-items:center;gap:8px"><input id="exn" type="number" min="1" step="1" value="200" title="완전탐색 후보 상한" hidden style="width:64px;padding:8px 6px;border-radius:10px;border:1px solid #4a3f2a;background:#2a2418;color:#f3e9d2;font-size:14px;text-align:center"><button data-a="lang" id="lg"></button></div></header>
 <svg id="bd" viewBox="0 0 360 186"></svg>
 <div class="row" id="tl"></div>
 <div class="row eq"><button class="p" data-a="hint" id="bh"></button><button data-a="undo" id="bu"></button><button data-a="reset" id="br"></button></div>
@@ -20,17 +20,23 @@
 <script src="js/algorithm.js"></script>
 <script src="js/ui.js"></script>
 <script>
-/* 디버그 */
+/* x=6 전용: 완전탐색 후보 상한 입력칸(언어 버튼 옆) + 디버그 줄 */
 (function(){
- var d=document.getElementById('dbg'),m=document.getElementById('msg');
+ var d=document.getElementById('dbg'),m=document.getElementById('msg'),inp=document.getElementById('exn');
+ if(XM)inp.hidden=false;
  function upd(){
   try{
    if(!XM){d.textContent='';return}
-   var cf=cands(),N=cf.length,k=3-found().length,r;
-   try{r=exRec()}catch(e){r='ERR '+e.message}
-   d.textContent='[디버그] 후보 '+N+'개 · 칸수 '+exCells(cf)+' · 남은 당첨 '+k+' · 한도 '+EX_MAXN+' · exRec='+r
+   var N=cands().length,k=3-found().length;
+   var r=(N>=2&&k>=1&&N<=EX_MAXN)?'완전탐색 대상':'기존 방식';
+   d.textContent='[x=6 디버그] 후보 '+N+'개 · 남은 당첨 '+k+' · 상한 '+EX_MAXN+' · '+r
   }catch(e){d.textContent='[디버그 오류] '+e.message}
  }
+ inp.addEventListener('change',function(){
+  var v=parseInt(inp.value,10);
+  if(!(v>=1)){v=200}
+  inp.value=v;EX_MAXN=v;upd();
+ });
  new MutationObserver(upd).observe(m,{childList:true,subtree:true,characterData:true});
  setTimeout(upd,0);
 })();
