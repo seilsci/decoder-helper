@@ -9,6 +9,7 @@
 <div class="row" id="tl"></div>
 <div class="row eq"><button class="p" data-a="hint" id="bh"></button><button data-a="undo" id="bu"></button><button data-a="reset" id="br"></button></div>
 <div id="msg"></div>
+<div id="dbg" style="font-size:12px;color:#8cf;margin:6px 4px;word-break:break-all"></div>
 <p><small id="cn"></small></p>
 </main>
 <div id="ov" data-a="ovx" hidden></div>
@@ -18,4 +19,20 @@
 <script src="js/tables.js"></script>
 <script src="js/algorithm.js"></script>
 <script src="js/ui.js"></script>
+<script>
+/* x=6 디버그: 추천 문구(#msg)가 바뀔 때마다 완전탐색 상태를 #dbg에 표시 */
+(function(){
+ var d=document.getElementById('dbg'),m=document.getElementById('msg');
+ function upd(){
+  try{
+   if(!XM){d.textContent='';return}
+   var N=cands().length,k=3-found().length,r;
+   try{r=exRec()}catch(e){r='ERR '+e.message}
+   d.textContent='[x=6 디버그] 후보 '+N+'개 · 남은 당첨 '+k+' · 한도 '+EX_MAXN+' · exRec='+r
+  }catch(e){d.textContent='[디버그 오류] '+e.message}
+ }
+ new MutationObserver(upd).observe(m,{childList:true,subtree:true,characterData:true});
+ setTimeout(upd,0);
+})();
+</script>
 </body></html>
