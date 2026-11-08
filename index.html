@@ -20,13 +20,13 @@
 <script src="js/algorithm.js"></script>
 <script src="js/ui.js"></script>
 <script>
-/* x=6 전용: 완전탐색 후보 상한 입력칸(언어 버튼 옆) + 디버그 줄 */
 (function(){
  var d=document.getElementById('dbg'),m=document.getElementById('msg'),inp=document.getElementById('exn');
- if(XM)inp.hidden=false;
+ function on(){return XM&&S.lang==='ko'}
  function upd(){
   try{
-   if(!XM){d.textContent='';return}
+   inp.hidden=!on();
+   if(!on()){d.textContent='';return}
    var N=cands().length,k=3-found().length;
    var r=(N>=2&&k>=1&&N<=EX_MAXN)?'완전탐색 대상':'기존 방식';
    d.textContent='[x=6 디버그] 후보 '+N+'개 · 남은 당첨 '+k+' · 상한 '+EX_MAXN+' · '+r
