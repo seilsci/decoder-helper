@@ -119,8 +119,8 @@ function exRec(){
  if(exCells(cf)>EX_MAXN)return -3;
  const F=new Uint8Array(42),op=new Uint8Array(42);
  found().forEach(i=>F[i]=1);opened().forEach(i=>op[i]=1);
- const u0=new Set();cf.forEach(t=>t.forEach(i=>u0.add(i)));
- for(let i=0;i<42;i++)if(!u0.has(i))op[i]=1; /* 0%인 칸은 열린 칸 취급 */
+ const c0=new Uint32Array(42);cf.forEach(t=>t.forEach(i=>c0[i]++));
+ for(let i=0;i<42;i++)if(c0[i]==0||c0[i]==N)op[i]=1; /* 0%·100% 확정 칸은 탐색 대상에서 제외(열린 칸 취급) */
  const H=C.map((_,i)=>i).filter(i=>state(i)=='h');
  exMemo.clear();exCalls=0;exT0=Date.now();
  try{
