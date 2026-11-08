@@ -177,3 +177,8 @@ function openRec(){
   if(S.obs.length==3)key+='|r'+(S.obs[2].h?1:0);
   const r=OPEN3[key];return r===undefined?null:r}
  return null}
+function exDebug(){
+ if(!XM)return '';
+ const N=cands().length,k=3-found().length;
+ let r;try{r=exRec()}catch(e){r='ERR '+e.message}
+ return '[x=6 디버그] 후보 '+N+'개 · 남은 당첨 '+k+' · 한도 '+EX_MAXN+' · exRec='+r}
