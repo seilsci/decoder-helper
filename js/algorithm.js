@@ -1,80 +1,236 @@
-/* 언어 / 문구 — 번역 문구(L), 안내 문구(OOPS), 검색용 국가 코드(LC), 언어 목록(LG), 문구 치환(F), 안내 문구 헬퍼
-   기본 18개 언어. 세 변수(L, OOPS, LC)는 언어 선택 화면 순서(아래 LG)와 같은 순서로 유지 — 정렬하지 말 것.
-   추가 언어(국가 코드 abc순 정렬)는 lang2.js */
+/* 알고리즘 — 보드 구조, 후보 계산, 확률 분석, 완전 탐색, 추천 로직 (화면 코드 없음) */
+const R=[8,9,8,9,8],C=[];
+R.forEach((n,r)=>{for(let c=0;c<n;c++)C.push({r,c,x:r%2?c:c+.5})});
+const NB=C.map((a,i)=>C.map((b,j)=>j).filter(j=>{const b=C[j],dr=Math.abs(a.r-b.r),dx=Math.abs(a.x-b.x);return j!=i&&((dr==0&&dx==1)||(dr==1&&dx==.5))}));
+const T=[];for(let a=0;a<42;a++)for(let b=a+1;b<42;b++)for(let c=b+1;c<42;c++)T.push([a,b,c]);
+const found=()=>S.obs.filter(o=>o.k=='f').map(o=>o.i);
+const clicks=()=>S.obs.filter(o=>'bhf'.includes(o.k)&&!o.manual).length-S.n0;
+function opened(){const s=new Set([...S.xs,...S.os]);S.obs.forEach(o=>{s.add(o.i);if(o.k=='b')NB[o.i].forEach(j=>s.add(j))});return s}
+function ok(t,o){const hit=t.includes(o.i);if(o.k=='f')return hit;if(hit)return false;
+ const near=NB[o.i].some(j=>t.includes(j)&&!o.F.includes(j));return(o.k=='h'||o.h)?near:!near}
+function eff(){const tg=new Map();S.obs.forEach(o=>{if(o.k=='t')tg.set(o.r,!tg.get(o.r))});
+ return S.obs.filter(o=>o.k!='t').map(o=>o.k=='r'&&tg.get(o)?{...o,h:!o.h}:o)}
+function cands(E){E=E||eff();return T.filter(t=>!t.some(i=>S.xs.has(i)||S.os.has(i))&&E.every(o=>ok(t,o)))}
+function conflict(){
+ const E=eff();let bestV=null;
+ for(const t of T){if(t.some(i=>S.xs.has(i)||S.os.has(i)))continue;
+  const v=E.filter(o=>!ok(t,o));
+  if(!bestV||v.length<bestV.length){bestV=v;if(!v.length)break}}
+ return bestV?[...new Set(bestV.map(o=>o.i))]:[]}
+function lastR(i){let r=null;S.obs.forEach(o=>{if(o.k=='r'&&o.i==i)r=o});return r}
+function addObs(i,k){
+ const o={i,k,F:found()};
+ S.obs.push(o);
+ if(k=='f'){
+  o.q=[...new Set(S.obs.filter(h=>h.k=='h'&&NB[h.i].includes(i)&&state(h.i)=='h').map(h=>h.i))];
+  if(found().length>=3)o.q.forEach(c=>S.obs.push({i:c,k:'r',h:false,F:found(),ans:true,fo:o}));
+  else if(o.q.length){/* 남은 후보 전부에서 ! 유지 여부가 같으면 질문 생략: 주변에 아직 안 열린 칸이 없어 ! 가 사라질 수밖에 없는 경우 등. 후보마다 갈리는 ! 만 질문 */
+   const cf=cands(),F=found();
+   if(cf.length)o.q.forEach(c=>{
+    const hs=new Set(cf.map(t=>NB[c].some(j=>t.includes(j)&&!F.includes(j))));
+    if(hs.size==1)S.obs.push({i:c,k:'r',h:[...hs][0],F:found(),ans:true,auto:true,fo:o})})}}}
+function qf(){for(let p=S.obs.length-1;p>=0;p--){if(S.obs[p].k=='f'&&S.obs[p].q)return S.obs[p]}return null}
+function pend(){const f=qf();return f?f.q.filter(c=>!S.obs.some(r=>r.k=='r'&&r.fo===f&&r.i==c)):[]}
+function answer(h){const q=pend();if(!q.length)return;S.obs.push({i:q[0],k:'r',h,F:found(),ans:true,fo:qf()})}
+function undoObs(){const o=S.obs.pop();if(o&&o.auto){while(S.obs.length&&S.obs[S.obs.length-1].auto&&S.obs[S.obs.length-1].fo===o.fo)S.obs.pop();S.obs.pop()}}
+function analyze(){
+ const cf=cands(),N=cf.length,F=found(),op=opened();
+ const ni=Array(42).fill(0),ex=Array(42).fill(0),bl=Array(42).fill(0);
+ for(const t of cf){const un=t.filter(i=>!F.includes(i));
+  for(let x=0;x<42;x++){if(op.has(x))continue;
+   if(t.includes(x))ni[x]++;else if(NB[x].some(j=>un.includes(j)))ex[x]++;else bl[x]++}}
+ let rec=-1,best=-1;
+ if(N&&F.length<3)for(let x=0;x<42;x++){if(op.has(x))continue;
+  const sc=2*ni[x]/N+1-(ni[x]**2+ex[x]**2+bl[x]**2)/(N*N);if(sc>best){best=sc;rec=x}}
+ return{N,p:ni.map(v=>N?v/N:0),rec}}
+const ADJ=new Uint8Array(1764);NB.forEach((l,x)=>l.forEach(a=>ADJ[x*42+a]=1));
+const lf=(n,k)=>n&&k?k+.6*Math.log2(n):0;
+function best(cf,F,op,k,d,K){
+ const N=cf.length,ni=new Int32Array(42),ex=new Int32Array(42),bl=new Int32Array(42);
+ for(const t of cf){const u=t.filter(i=>!F[i]);
+  for(let x=0;x<42;x++){if(op[x])continue;
+   if(t[0]==x||t[1]==x||t[2]==x)ni[x]++;
+   else{let n=0;for(const a of u)if(ADJ[x*42+a]){n=1;break}n?ex[x]++:bl[x]++}}}
+ const v1=[];
+ for(let x=0;x<42;x++)if(!op[x]&&N)v1.push([1+(ni[x]*lf(ni[x],k-1)+ex[x]*lf(ex[x],k)+bl[x]*lf(bl[x],k))/N,x]);
+ v1.sort((a,b)=>a[0]-b[0]);
+ if(d<=1||!v1.length)return v1.length?v1[0]:[0,-1];
+ let bv=1e9,bx=-1;
+ for(const[,x]of v1.slice(0,K)){
+  const gi=[],gh=[],gb=[];
+  for(const t of cf){if(t.includes(x))gi.push(t);else if(t.some(a=>!F[a]&&ADJ[x*42+a]))gh.push(t);else gb.push(t)}
+  let v=1;const o1=op.slice();o1[x]=1;
+  if(gi.length&&k>1){const F2=F.slice();F2[x]=1;v+=gi.length/N*best(gi,F2,o1,k-1,d-1,K)[0]}
+  if(gh.length)v+=gh.length/N*best(gh,F,o1,k,d-1,K)[0];
+  if(gb.length){const o2=o1.slice();NB[x].forEach(j=>o2[j]=1);v+=gb.length/N*best(gb,F,o2,k,d-1,K)[0]}
+  if(v<bv){bv=v;bx=x}}
+ return[bv,bx]}
+function appChoice(cf,F,op,k){const N=cf.length;return(N>3000?best(cf,F,op,k,3,6):N>300?best(cf,F,op,k,4,6):best(cf,F,op,k,5,6))[1]}
+function deepRec(){
+ const cf=cands(),F=new Uint8Array(42),op=new Uint8Array(42);
+ found().forEach(i=>F[i]=1);opened().forEach(i=>op[i]=1);
+ const k=3-found().length,N=cf.length;if(!N||!k)return -1;
+ return appChoice(cf,F,op,k)}
 
-/* 언어별 화면 문구 */
-const L={
-"ko":{"t":"디코더 훈수","lang":"한국어","st":"중간부터 시작하면 예측이 덜 정확할 수 있어요. 처음부터 입력하는 걸 추천해요.","hint":"훈수","undo":"되돌리기","reset":"처음부터","tip0":"아래 도구(✕ / ! / 빈칸 / 당첨)를 고른 뒤<br>처음부터 열려 있는 칸을 눌러 표시하세요. 같은 칸을 다시 누르면 해제돼요. 끝나면 훈수!","tip1":"훈수를 누르면 다음 칸을 알려줘요. 게임에서 눌러 본 뒤 그 칸을 탭해 결과를 입력하세요.","vn":"당첨 주변의 느낌표가 사라졌어요. 게임에서 그 칸에 느낌표가 아직 남아 있으면 그 칸을 탭하세요. 느낌표가 다시 생기고 확률이 새로 계산돼요.","b":"빈칸","h":"느낌표","f":"당첨","rec":"추천: {c} (당첨 {p}%)","done":"3개 모두 찾았어요! 🎉","bad":"입력이 맞지 않아요. 되돌리기로 확인하세요.","badc":"서로 안 맞는 칸(빨간 테두리)","fbn":"입력이 일부 안 맞아서 가장 가까운 답을 추천해요. 안 맞는 칸(빨간 테두리)","need4":"이 입력은 당첨이 최소 {n}개 있어야 해서 맞지 않아요(당첨은 총 3개). 느낌표(!) 위치를 다시 확인해 주세요.","nopl":"이 느낌표(!) 주변에는 당첨이 들어갈 수 있는 칸이 없어요. 느낌표와 주변 ✕·★ 위치를 다시 확인해 주세요.","fin3":"당첨 3개를 모두 찾았는데 느낌표(!)가 남아 있어요. 느낌표 위치를 다시 확인해 주세요.","n":"누른 횟수 {a} · 찾은 당첨 {b}/3 · 칸 숫자는 당첨 확률(%)","lab":"{r}줄 {c}번째","warn":"⚠️ 당첨을 찾은 뒤에도 남아 있는 !는 반드시 표시하세요. 빠뜨리면 정답 칸이 맨 마지막에 열려요.","calc":"계산 중…","exok":"완전탐색으로 계산한 추천이에요.","exfb":"계산이 너무 오래 걸려서 이번에는 기존 방식으로 추천했어요.","exbig":"후보가 아직 많아서 이번에는 기존 방식으로 추천했어요.","qn":"지금 게임에서 이 칸은 어떻게 보이나요?"},
-"ja":{"t":"デコーダー攻略","lang":"日本語","st":"途中から始めると、確率の精度が下がることがあります。最初から入力することをおすすめします。","hint":"ヒント","undo":"戻す","reset":"最初から","tip0":"下のツール(✕ / ! / 空き / 当たり)を選び、最初から開いているマスをタップ。同じマスをもう一度タップすると解除。終わったらヒントを押してください。","tip1":"ヒントで次のマスを表示します。ゲームで開けてから、ここで同じマスをタップして結果を入力してください。","vn":"当たりの周りの「!」が消えました。ゲームでまだ残っていれば、そのマスをタップしてください。「!」が復活して確率が再計算されます。","b":"空き","h":"！","f":"当たり","rec":"おすすめ: {c}(当たり {p}%)","done":"3つ全部見つけました！🎉","bad":"入力が矛盾しています。「戻す」で確認してください。","n":"押した回数 {a} · 当たり {b}/3 · 数字は当たり確率(%)","lab":"{r}行目 {c}番目","warn":"⚠️ 当たりを見つけた後も残っている「!」は必ず印をつけてください。つけ忘れると、正解のマスが一番最後に開きます。","calc":"計算中…","badc":"合わないマス(赤い枠)","fbn":"入力が一部合わないため、最も近い答えをおすすめします。合わないマス(赤い枠)","need4":"この入力だと当たりが最低{n}つ必要ですが、当たりは全部で3つです。「!」の位置をもう一度確認してください。","nopl":"この「!」の周りには当たりが入れるマスがありません。「!」と周りの✕・★の位置をもう一度確認してください。","fin3":"当たり3つをすべて見つけたのに「!」が残っています。「!」の位置をもう一度確認してください。","qn":"今ゲームでこのマスはどう見えますか？"},
-"zh":{"t":"解码器助手","lang":"中文","st":"从中途开始，概率可能会不够准确。建议从游戏一开始就输入。","hint":"提示","undo":"撤销","reset":"重新开始","tip0":"先选择下方工具（✕ / ! / 空格 / 奖励），再点击开局已打开的格子。再点同一格可取消。完成后按“提示”。","tip1":"按“提示”获得下一格。先在游戏中点开，再在这里点同一格并输入结果。","vn":"奖励周围的“!”已消失。如果游戏里仍然显示，请点击该格，“!”会重新出现并重新计算概率。","b":"空格","h":"感叹号","f":"奖励","rec":"推荐：{c}（中奖率 {p}%）","done":"3个奖励全部找到！🎉","bad":"输入前后矛盾，请用“撤销”检查。","n":"已点 {a} 次 · 已找到 {b}/3 · 数字为中奖概率(%)","lab":"第{r}行第{c}个","warn":"⚠️ 找到奖励后仍然保留的“!”，请务必标出来。漏标的话，正确的格子会被排到最后才打开。","calc":"计算中…","badc":"不匹配的格子(红框)","fbn":"部分输入不匹配，已推荐最接近的答案。不匹配的格子(红框)","need4":"按这样的输入至少需要{n}个奖励，但奖励一共只有3个。请重新确认“!”的位置。","nopl":"这些“!”周围没有可以放奖励的格子。请重新确认“!”以及周围的✕和★。","fin3":"3个奖励都已找到，但仍有“!”标记。请重新确认“!”的位置。","qn":"现在游戏里这一格是什么样？"},
-"zh-TW":{"t":"解碼器助手","lang":"繁體中文","st":"從中途開始，機率可能會不夠準確。建議從遊戲一開始就輸入。","hint":"提示","undo":"復原","reset":"重新開始","tip0":"先選擇下方工具（✕ / ! / 空格 / 獎勵），再點擊開局已打開的格子。再點同一格可取消。完成後按「提示」。","tip1":"按「提示」取得下一格。先在遊戲中點開，再在這裡點同一格並輸入結果。","vn":"獎勵周圍的「!」已消失。如果遊戲裡仍然顯示，請點擊該格，「!」會重新出現並重新計算機率。","b":"空格","h":"驚嘆號","f":"獎勵","rec":"推薦：{c}（中獎率 {p}%）","done":"3個獎勵全部找到！🎉","bad":"輸入前後矛盾，請用「復原」檢查。","badc":"不相符的格子(紅框)","fbn":"部分輸入不相符，已推薦最接近的答案。不相符的格子(紅框)","need4":"依這樣的輸入至少需要{n}個獎勵，但獎勵一共只有3個。請重新確認「!」的位置。","nopl":"這些「!」周圍沒有可以放獎勵的格子。請重新確認「!」以及周圍的✕和★。","fin3":"3個獎勵都已找到，但仍有「!」標記。請重新確認「!」的位置。","n":"已點 {a} 次 · 已找到 {b}/3 · 數字為中獎機率(%)","lab":"第{r}行第{c}個","warn":"⚠️ 找到獎勵後仍然保留的「!」，請務必標出來。漏標的話，正確的格子會被排到最後才打開。","calc":"計算中…","qn":"現在遊戲裡這一格是什麼樣？"},
-"id":{"t":"Pembantu Decoder","lang":"Bahasa Indonesia","st":"Mulai di tengah permainan bisa membuat peluang kurang akurat. Kami sarankan mulai dari awal.","hint":"Petunjuk","undo":"Urungkan","reset":"Mulai ulang","tip0":"Pilih alat di bawah (✕ / ! / Kosong / Hadiah), lalu ketuk kotak yang terbuka sejak awal. Ketuk kotak yang sama lagi untuk menghapus. Lalu tekan Petunjuk.","tip1":"Tekan Petunjuk untuk melihat kotak berikutnya. Buka di permainan, ketuk di sini, lalu masukkan hasilnya.","vn":"“!” di samping hadiah menghilang. Jika masih terlihat di permainan, ketuk kotak itu: “!” akan muncul lagi dan peluang dihitung ulang.","b":"Kosong","h":"Tanda (!)","f":"Hadiah","rec":"Coba: {c} (hadiah {p}%)","done":"Ketiga hadiah ditemukan! 🎉","bad":"Data saling bertentangan. Gunakan Urungkan untuk memeriksa.","badc":"Kotak yang tidak cocok (garis merah)","fbn":"Sebagian data tidak cocok, jadi ini jawaban terdekat. Kotak yang bertentangan (garis merah)","need4":"Dengan data ini dibutuhkan minimal {n} hadiah, padahal hanya ada 3. Periksa lagi posisi “!”.","nopl":"Di sekitar “!” ini tidak ada kotak yang bisa berisi hadiah. Periksa lagi “!” serta ✕ dan ★ di sekitarnya.","fin3":"Ketiga hadiah sudah ditemukan, tetapi masih ada “!” yang ditandai. Periksa lagi posisi “!”.","n":"Ketukan {a} · Hadiah {b}/3 · Angka = peluang hadiah (%)","lab":"Baris {r}, ke-{c}","warn":"⚠️ Setelah menemukan hadiah, wajib tandai semua “!” yang masih ada di permainan. Jika ada yang terlewat, kotak yang benar akan dibuka paling akhir.","calc":"Menghitung…","qn":"Seperti apa kotak ini sekarang di permainan?"},
-"vi":{"t":"Trợ lý Decoder","lang":"Tiếng Việt","st":"Bắt đầu giữa chừng có thể làm xác suất kém chính xác. Chúng tôi khuyên bạn nên nhập từ đầu.","hint":"Gợi ý","undo":"Hoàn tác","reset":"Làm lại","tip0":"Chọn một công cụ bên dưới (✕ / ! / Ô trống / Giải thưởng), rồi chạm vào các ô đã mở sẵn từ đầu. Chạm lại cùng ô để bỏ chọn. Sau đó nhấn Gợi ý.","tip1":"Nhấn Gợi ý để xem ô tiếp theo. Hãy mở ô đó trong game, chạm vào ô đó ở đây và nhập kết quả.","vn":"Dấu “!” cạnh giải thưởng đã biến mất. Nếu trong game vẫn còn, hãy chạm vào ô đó: dấu “!” sẽ hiện lại và xác suất được tính lại.","b":"Ô trống","h":"Cảnh báo (!)","f":"Giải thưởng","rec":"Thử: {c} (giải thưởng {p}%)","done":"Đã tìm thấy đủ 3 giải thưởng! 🎉","bad":"Dữ liệu mâu thuẫn. Hãy dùng Hoàn tác để kiểm tra.","badc":"Các ô không khớp (viền đỏ)","fbn":"Một số dữ liệu không khớp nên đây là đáp án gần nhất. Các ô mâu thuẫn (viền đỏ)","need4":"Với dữ liệu này cần ít nhất {n} giải thưởng, nhưng chỉ có tổng cộng 3. Hãy kiểm tra lại vị trí các dấu “!”.","nopl":"Quanh các dấu “!” này không có ô nào có thể chứa giải thưởng. Hãy kiểm tra lại dấu “!” và các ô ✕, ★ xung quanh.","fin3":"Đã tìm thấy đủ 3 giải thưởng nhưng vẫn còn dấu “!” được đánh dấu. Hãy kiểm tra lại vị trí các dấu “!”.","n":"Lượt chạm {a} · Giải thưởng {b}/3 · Con số = xác suất giải thưởng (%)","lab":"Hàng {r}, ô thứ {c}","warn":"⚠️ Sau khi tìm thấy giải thưởng, nhất định phải đánh dấu mọi dấu “!” còn lại trong game. Nếu bỏ sót, ô đúng sẽ được mở cuối cùng.","calc":"Đang tính…","qn":"Hiện tại ô này trong game trông thế nào?"},
-"th":{"t":"ตัวช่วย Decoder","lang":"ไทย","st":"การเริ่มกลางเกมอาจทำให้ความน่าจะเป็นแม่นยำน้อยลง. แนะนำให้กรอกตั้งแต่ต้นเกม","hint":"คำใบ้","undo":"ย้อนกลับ","reset":"เริ่มใหม่","tip0":"เลือกเครื่องมือด้านล่าง (✕ / ! / ช่องว่าง / รางวัล) แล้วแตะช่องที่เปิดอยู่ตั้งแต่ต้น. แตะช่องเดิมอีกครั้งเพื่อยกเลิก. จากนั้นกดคำใบ้","tip1":"กดคำใบ้เพื่อดูช่องถัดไป. เปิดช่องนั้นในเกม แล้วแตะช่องนั้นที่นี่และใส่ผลลัพธ์.","vn":"“!” ข้างรางวัลหายไปแล้ว. ถ้าในเกมยังเห็นอยู่ ให้แตะช่องนั้น “!” จะกลับมาและคำนวณความน่าจะเป็นใหม่","b":"ช่องว่าง","h":"คำเตือน (!)","f":"รางวัล","rec":"ลอง: {c} (รางวัล {p}%)","done":"พบรางวัลครบทั้ง 3 แล้ว! 🎉","bad":"ข้อมูลขัดแย้งกัน ใช้ย้อนกลับเพื่อตรวจสอบ","badc":"ช่องที่ไม่ตรงกัน (กรอบสีแดง)","fbn":"ข้อมูลบางส่วนไม่ตรงกัน จึงแนะนำคำตอบที่ใกล้เคียงที่สุด ช่องที่ขัดแย้ง (กรอบสีแดง)","need4":"ข้อมูลนี้ต้องมีรางวัลอย่างน้อย {n} อัน แต่มีทั้งหมดแค่ 3 อัน โปรดตรวจสอบตำแหน่ง “!” อีกครั้ง","nopl":"รอบ “!” เหล่านี้ไม่มีช่องที่รางวัลจะอยู่ได้ โปรดตรวจสอบ “!” และ ✕ กับ ★ รอบๆ อีกครั้ง","fin3":"พบรางวัลครบ 3 อันแล้ว แต่ยังมี “!” ที่ทำเครื่องหมายอยู่ โปรดตรวจสอบตำแหน่ง “!” อีกครั้ง","n":"แตะ {a} ครั้ง · รางวัล {b}/3 · ตัวเลข = โอกาสเป็นรางวัล (%)","lab":"แถว {r} ช่องที่ {c}","warn":"⚠️ หลังพบรางวัลแล้ว ต้องทำเครื่องหมายทุก “!” ที่ยังเหลืออยู่ในเกม. ถ้าพลาดไปอันใดอันหนึ่ง ช่องที่ถูกต้องจะถูกเปิดเป็นอันสุดท้าย","calc":"กำลังคำนวณ…","qn":"ตอนนี้ช่องนี้ในเกมเป็นอย่างไร?"},
-"hi":{"t":"डिकोडर सहायक","lang":"हिन्दी","st":"खेल के बीच से शुरू करने पर संभावनाएँ कम सटीक हो सकती हैं। हम शुरुआत से दर्ज करने की सलाह देते हैं।","hint":"संकेत","undo":"पूर्ववत","reset":"फिर से शुरू","tip0":"नीचे से कोई टूल चुनें (✕ / ! / खाली / इनाम), फिर शुरुआत में खुले खानों पर टैप करें। उसी खाने पर दोबारा टैप करने से निशान हट जाता है। फिर संकेत दबाएँ।","tip1":"अगला खाना जानने के लिए संकेत दबाएँ। उसे खेल में खोलें, फिर यहाँ उस पर टैप करके नतीजा दर्ज करें।","vn":"इनाम के पास का “!” गायब हो गया। अगर वह खेल में अब भी दिख रहा है, तो उस खाने पर टैप करें। “!” वापस आ जाएगा और संभावनाएँ दोबारा निकाली जाएँगी।","b":"खाली","h":"चेतावनी (!)","f":"इनाम","rec":"आज़माएँ: {c} (इनाम {p}%)","done":"तीनों इनाम मिल गए! 🎉","bad":"दर्ज की गई जानकारी आपस में मेल नहीं खाती। जाँचने के लिए पूर्ववत दबाएँ।","badc":"मेल न खाने वाले खाने (लाल किनारा)","fbn":"कुछ जानकारी मेल नहीं खाती, इसलिए यह सबसे नज़दीकी जवाब है। मेल न खाने वाले खाने (लाल किनारा)","need4":"इस जानकारी के लिए कम से कम {n} इनाम चाहिए, जबकि कुल इनाम सिर्फ़ 3 हैं। कृपया “!” की जगहें दोबारा जाँचें।","nopl":"इन “!” के आसपास कोई ऐसा खाना नहीं है जहाँ इनाम हो सके। कृपया “!” और आसपास के ✕ व ★ दोबारा जाँचें।","fin3":"तीनों इनाम मिल चुके हैं, फिर भी “!” का निशान बचा है। कृपया “!” की जगहें दोबारा जाँचें।","n":"टैप {a} · इनाम {b}/3 · संख्याएँ = इनाम की संभावना (%)","lab":"पंक्ति {r}, क्रमांक {c}","warn":"⚠️ इनाम मिलने के बाद भी खेल में बचे हर “!” पर ज़रूर निशान लगाएँ। एक भी छूटा तो सही खाना सबसे आख़िर में खुलेगा।","calc":"गणना हो रही है…","qn":"अभी खेल में यह खाना कैसा दिख रहा है?"},
-"ar":{"t":"مساعد ديكودر","lang":"العربية","st":"البدء من منتصف اللعبة قد يجعل النسب أقل دقة. ننصحك بالبدء من البداية.","hint":"تلميح","undo":"تراجع","reset":"من جديد","tip0":"اختر أداة من الأسفل (✕ / ! / فارغة / جائزة) ثم اضغط على المربعات المفتوحة في البداية. اضغط على المربع نفسه مرة أخرى لإزالته. ثم اضغط تلميح.","tip1":"اضغط تلميح لمعرفة المربع التالي. افتحه في اللعبة ثم اضغط عليه هنا وأدخل النتيجة.","vn":"اختفت «!» المجاورة للجائزة. إذا كانت لا تزال ظاهرة في اللعبة، اضغط على ذلك المربع، وستعود «!» ويُعاد حساب النسب.","b":"فارغة","h":"تنبيه (!)","f":"جائزة","rec":"جرّب: {c} (احتمال الجائزة {p}%)","done":"تم العثور على الجوائز الثلاث! 🎉","bad":"المدخلات متعارضة. استخدم تراجع للتحقق.","badc":"مربعات لا تتطابق (إطار أحمر)","fbn":"بعض المدخلات لا تتطابق، لذا هذه أقرب إجابة. المربعات المتعارضة (إطار أحمر)","need4":"هذه المدخلات تتطلب {n} جوائز على الأقل، لكن العدد الكلي 3 فقط. تحقق من مواضع «!».","nopl":"لا يوجد حول هذه «!» مربع يمكن أن توجد فيه جائزة. تحقق من «!» ومن ✕ و★ المجاورة.","fin3":"تم العثور على الجوائز الثلاث، لكن ما زالت هناك «!» معلَّمة. تحقق من مواضع «!».","n":"الضغطات {a} · الجوائز {b}/3 · الأرقام = احتمال الجائزة (%)","lab":"الصف {r}، رقم {c}","warn":"⚠️ بعد العثور على جائزة، علِّم حتمًا كل «!» لا تزال ظاهرة في اللعبة. إذا فاتتك واحدة، سيُفتح المربع الصحيح أخيرًا.","calc":"جارٍ الحساب…","qn":"كيف يبدو هذا المربع الآن في اللعبة؟"},
-"tr":{"t":"Decoder Yardımcısı","lang":"Türkçe","st":"Oyunun ortasından başlamak olasılıkları daha az doğru yapabilir. En baştan başlamanı öneririz.","hint":"İpucu","undo":"Geri al","reset":"Yeniden başla","tip0":"Aşağıdan bir araç seç (✕ / ! / Boş / Ödül), ardından başta açık olan karelere dokun. Aynı kareye tekrar dokunursan işaret kalkar. Sonra İpucu'na bas.","tip1":"Sıradaki kareyi görmek için İpucu'na bas. Oyunda aç, burada ona dokun ve sonucu gir.","vn":"Ödülün yanındaki “!” kayboldu. Oyunda hâlâ görünüyorsa o kareye dokun: “!” geri gelir ve olasılıklar yeniden hesaplanır.","b":"Boş","h":"Uyarı (!)","f":"Ödül","rec":"Dene: {c} (ödül %{p})","done":"3 ödülün hepsi bulundu! 🎉","bad":"Girdiler birbiriyle çelişiyor. Kontrol için Geri al'ı kullan.","badc":"Uyuşmayan kareler (kırmızı çerçeve)","fbn":"Bazı girdiler uyuşmuyor, bu yüzden en yakın cevap gösteriliyor. Çelişen kareler (kırmızı çerçeve)","need4":"Bu girdiler için en az {n} ödül gerekir ama toplam yalnızca 3 ödül var. “!” konumlarını tekrar kontrol et.","nopl":"Bu “!” işaretlerinin çevresinde ödül olabilecek kare yok. “!” işaretlerini ve çevredeki ✕ ile ★ işaretlerini tekrar kontrol et.","fin3":"3 ödülün hepsi bulundu ama hâlâ işaretli bir “!” var. “!” konumlarını tekrar kontrol et.","n":"Dokunuş {a} · Ödül {b}/3 · Sayılar = ödül olasılığı (%)","lab":"Satır {r}, kare {c}","warn":"⚠️ Ödül bulduktan sonra oyunda kalan tüm “!” simgelerini mutlaka işaretle. Birini atlarsan doğru kare en son açılır.","calc":"Hesaplanıyor…","qn":"Bu kare şu an oyunda nasıl görünüyor?"},
-"en":{"t":"Decoder Helper","lang":"English","st":"Starting mid-game can make the odds less accurate. We recommend starting from the very beginning.","hint":"Hint","undo":"Undo","reset":"Restart","tip0":"Pick a tool below (✕ / ! / Blank / Prize), then tap the cells that start open. Tap the same cell again to clear it. Then press Hint.","tip1":"Press Hint for the next cell. Try it in the game, then tap it here and enter the result.","vn":"The \"!\" next to the prize disappeared. If it's still showing in the game, tap that cell. The \"!\" will come back and the odds will be recalculated.","b":"Blank","h":"Hint (!)","f":"Prize","rec":"Try: {c} ({p}% prize)","done":"All 3 prizes found! 🎉","bad":"Inputs conflict. Use Undo to check.","badc":"Cells that don't fit (red outline)","fbn":"Some inputs don't fit, so this is the closest answer. Mismatched cells (red outline)","need4":"These inputs need at least {n} prizes, but there are only 3. Please double-check the positions of the “!” cells.","nopl":"No cell next to these “!” can hold a prize. Please double-check the “!” cells and the surrounding ✕ and ★.","fin3":"All 3 prizes are found, but a “!” is still marked. Please double-check the “!” cells.","n":"Clicks {a} · Prizes {b}/3 · Numbers = prize chance (%)","lab":"Row {r}, #{c}","warn":"⚠️ After finding a prize, be sure to mark every “!” still showing in the game. If you miss one, the correct cell will be opened last.","calc":"Calculating…","qn":"How does this cell look in the game now?"},
-"de":{"t":"Decoder-Helfer","lang":"Deutsch","st":"Wenn du mitten im Spiel einsteigst, können die Chancen ungenauer sein. Wir empfehlen, von Anfang an zu starten.","hint":"Tipp","undo":"Zurück","reset":"Neustart","tip0":"Wähle unten ein Werkzeug (✕ / ! / Leer / Preis) und tippe die anfangs offenen Felder an. Erneut tippen löscht das Feld. Dann auf Tipp drücken.","tip1":"Tipp zeigt das nächste Feld. Öffne es im Spiel, tippe es hier an und gib das Ergebnis ein.","vn":"Das „!“ neben dem Preis ist verschwunden. Steht es im Spiel noch, tippe das Feld an: Das „!“ kommt zurück und die Chancen werden neu berechnet.","b":"Leer","h":"Hinweis (!)","f":"Preis","rec":"Probiere: {c} ({p}% Preis)","done":"Alle 3 Preise gefunden! 🎉","bad":"Eingaben widersprechen sich. Mit Zurück prüfen.","n":"Klicks {a} · Preise {b}/3 · Zahlen = Preis-Chance (%)","lab":"Reihe {r}, Nr. {c}","warn":"⚠️ Markiere nach dem Fund eines Preises unbedingt jedes „!“, das im Spiel noch steht. Wenn du eines auslässt, wird das richtige Feld ganz zuletzt geöffnet.","calc":"Berechne…","badc":"Felder, die nicht passen (roter Rand)","fbn":"Einige Eingaben passen nicht; dies ist die nächstliegende Antwort. Widersprüchliche Felder (roter Rand)","need4":"Mit diesen Eingaben wären mindestens {n} Preise nötig, es gibt aber nur 3. Bitte prüfe die Positionen der „!“.","nopl":"Neben diesen „!“ gibt es kein Feld, auf dem ein Preis liegen kann. Bitte prüfe die „!“ sowie die ✕ und ★ in der Nähe.","fin3":"Alle 3 Preise sind gefunden, aber es ist noch ein „!“ markiert. Bitte prüfe die Positionen der „!“.","qn":"Wie sieht dieses Feld jetzt im Spiel aus?"},
-"fr":{"t":"Aide Decoder","lang":"Français","st":"Commencer en cours de partie peut rendre les probabilités moins précises. Nous vous recommandons de commencer dès le début.","hint":"Indice","undo":"Annuler","reset":"Recommencer","tip0":"Choisissez un outil en dessous (✕ / ! / Vide / Prix), puis touchez les cases ouvertes au départ. Touchez à nouveau une case pour l'effacer. Puis appuyez sur Indice.","tip1":"Indice affiche la prochaine case. Ouvrez-la dans le jeu, touchez-la ici et indiquez le résultat.","vn":"Le « ! » à côté du prix a disparu. S'il est toujours affiché dans le jeu, touchez cette case : le « ! » reviendra et les probabilités seront recalculées.","b":"Vide","h":"Alerte (!)","f":"Prix","rec":"Essayez : {c} ({p} % prix)","done":"Les 3 prix sont trouvés ! 🎉","bad":"Données contradictoires. Utilisez Annuler pour vérifier.","n":"Appuis {a} · Prix {b}/3 · Chiffres = probabilité de prix (%)","lab":"Ligne {r}, n° {c}","warn":"⚠️ Après avoir trouvé un prix, marquez impérativement tous les « ! » qui restent dans le jeu. Si vous en oubliez, la bonne case sera ouverte en dernier.","calc":"Calcul…","badc":"Cases qui ne concordent pas (contour rouge)","fbn":"Certaines données ne concordent pas, voici la réponse la plus proche. Cases en conflit (contour rouge)","need4":"Avec ces données, il faudrait au moins {n} prix, alors qu'il n'y en a que 3. Vérifiez la position des « ! ».","nopl":"Autour de ces « ! », aucune case ne peut contenir un prix. Vérifiez les « ! » ainsi que les ✕ et ★ voisins.","fin3":"Les 3 prix sont trouvés, mais des « ! » restent marqués. Vérifiez la position des « ! ».","qn":"Comment cette case apparaît-elle maintenant dans le jeu ?"},
-"it":{"t":"Aiuto Decoder","lang":"Italiano","st":"Se inizi a partita in corso, le probabilità possono essere meno precise. Ti consigliamo di iniziare dall'inizio.","hint":"Suggerimento","undo":"Annulla","reset":"Ricomincia","tip0":"Scegli uno strumento qui sotto (✕ / ! / Vuota / Premio) e tocca le caselle aperte all'inizio. Tocca di nuovo una casella per rimuoverla. Poi premi Suggerimento.","tip1":"Premi Suggerimento per vedere la casella successiva. Aprila nel gioco, toccala qui e inserisci il risultato.","vn":"Il “!” accanto al premio è sparito. Se nel gioco è ancora visibile, tocca quella casella: il “!” tornerà e le probabilità verranno ricalcolate.","b":"Vuota","h":"Avviso (!)","f":"Premio","rec":"Prova: {c} ({p}% premio)","done":"Tutti e 3 i premi trovati! 🎉","bad":"Dati in contraddizione. Usa Annulla per controllare.","badc":"Caselle che non coincidono (bordo rosso)","fbn":"Alcuni dati non coincidono, quindi questa è la risposta più vicina. Caselle in conflitto (bordo rosso)","need4":"Con questi dati servirebbero almeno {n} premi, ma ce ne sono solo 3. Controlla la posizione dei “!”.","nopl":"Intorno a questi “!” non c'è nessuna casella in cui possa esserci un premio. Controlla i “!” e le ✕ e ★ vicine.","fin3":"Tutti e 3 i premi sono stati trovati, ma c'è ancora un “!” segnato. Controlla la posizione dei “!”.","n":"Tocchi {a} · Premi {b}/3 · Numeri = probabilità di premio (%)","lab":"Riga {r}, n. {c}","warn":"⚠️ Dopo aver trovato un premio, segna sempre tutti i “!” che restano nel gioco. Se ne salti uno, la casella giusta verrà aperta per ultima.","calc":"Calcolo…","qn":"Come appare ora questa casella nel gioco?"},
-"pl":{"t":"Pomocnik Decoder","lang":"Polski","st":"Start w środku gry może zmniejszyć dokładność szans. Zalecamy zaczynać od samego początku.","hint":"Podpowiedź","undo":"Cofnij","reset":"Od nowa","tip0":"Wybierz narzędzie poniżej (✕ / ! / Pusta / Nagroda), a potem dotknij pól otwartych na starcie. Dotknij tego samego pola ponownie, aby je wyczyścić. Następnie naciśnij Podpowiedź.","tip1":"Naciśnij Podpowiedź, aby zobaczyć kolejne pole. Otwórz je w grze, dotknij go tutaj i wpisz wynik.","vn":"„!” obok nagrody zniknął. Jeśli w grze nadal jest widoczny, dotknij tego pola: „!” wróci, a szanse zostaną przeliczone.","b":"Pusta","h":"Alert (!)","f":"Nagroda","rec":"Spróbuj: {c} (nagroda {p}%)","done":"Znaleziono wszystkie 3 nagrody! 🎉","bad":"Dane są sprzeczne. Użyj Cofnij, aby sprawdzić.","badc":"Pola, które nie pasują (czerwona ramka)","fbn":"Część danych nie pasuje, więc to najbliższa odpowiedź. Pola w konflikcie (czerwona ramka)","need4":"Przy tych danych potrzeba co najmniej {n} nagród, a są tylko 3. Sprawdź jeszcze raz położenie „!”.","nopl":"Wokół tych „!” nie ma pola, na którym mogłaby być nagroda. Sprawdź jeszcze raz „!” oraz sąsiednie ✕ i ★.","fin3":"Wszystkie 3 nagrody zostały znalezione, ale nadal jest oznaczony „!”. Sprawdź jeszcze raz położenie „!”.","n":"Dotknięcia {a} · Nagrody {b}/3 · Liczby = szansa na nagrodę (%)","lab":"Rząd {r}, nr {c}","warn":"⚠️ Po znalezieniu nagrody koniecznie oznacz każdy „!”, który nadal jest w grze. Jeśli któryś pominiesz, właściwe pole zostanie otwarte na samym końcu.","calc":"Obliczanie…","qn":"Jak to pole wygląda teraz w grze?"},
-"ru":{"t":"Помощник Decoder","lang":"Русский","st":"Если начать с середины игры, шансы могут считаться менее точно. Рекомендуем начинать с самого начала.","hint":"Подсказка","undo":"Отмена","reset":"Заново","tip0":"Выберите инструмент внизу (✕ / ! / Пусто / Приз) и нажимайте на клетки, открытые в начале. Повторное нажатие снимает отметку. Затем нажмите «Подсказка».","tip1":"«Подсказка» покажет следующую клетку. Откройте её в игре, нажмите здесь и введите результат.","vn":"«!» рядом с призом исчез. Если в игре он ещё виден, нажмите на эту клетку: «!» вернётся, а шансы пересчитаются.","b":"Пусто","h":"«!»","f":"Приз","rec":"Попробуйте: {c} (приз {p}%)","done":"Все 3 приза найдены! 🎉","bad":"Данные противоречат друг другу. Проверьте через «Отмена».","n":"Нажатий {a} · Призов {b}/3 · Цифры — шанс приза (%)","lab":"Ряд {r}, № {c}","warn":"⚠️ После находки приза обязательно отмечайте все «!», которые остались в игре. Если пропустить хотя бы один, правильная клетка откроется самой последней.","calc":"Считаю…","badc":"Клетки, которые не подходят (красная рамка)","fbn":"Часть данных не сходится, поэтому показан ближайший ответ. Несовпадающие клетки (красная рамка)","need4":"По этим данным призов должно быть минимум {n}, а их всего 3. Проверьте расположение «!».","nopl":"Рядом с этими «!» нет клетки, где мог бы быть приз. Проверьте «!» и ближайшие ✕ и ★.","fin3":"Все 3 приза найдены, но «!» всё ещё отмечены. Проверьте расположение «!».","qn":"Как эта клетка выглядит в игре сейчас?"},
-"es":{"t":"Ayuda Decoder","lang":"Español","st":"Si empiezas a mitad de partida, las probabilidades pueden ser menos precisas. Te recomendamos empezar desde el principio.","hint":"Pista","undo":"Deshacer","reset":"Reiniciar","tip0":"Elige una herramienta abajo (✕ / ! / Vacía / Premio) y toca las casillas abiertas al inicio. Vuelve a tocar una casilla para quitarla. Luego pulsa Pista.","tip1":"Pulsa Pista para ver la siguiente casilla. Ábrela en el juego, tócala aquí e indica el resultado.","vn":"El \"!\" junto al premio ha desaparecido. Si sigue en el juego, toca esa casilla: el \"!\" volverá y se recalcularán las probabilidades.","b":"Vacía","h":"Aviso (!)","f":"Premio","rec":"Prueba: {c} ({p}% premio)","done":"¡Los 3 premios encontrados! 🎉","bad":"Datos contradictorios. Usa Deshacer para revisar.","n":"Toques {a} · Premios {b}/3 · Números = prob. de premio (%)","lab":"Fila {r}, n.º {c}","warn":"⚠️ Tras encontrar un premio, marca sin falta todos los «!» que sigan en el juego. Si te dejas alguno, la casilla correcta se abrirá la última.","calc":"Calculando…","badc":"Casillas que no encajan (borde rojo)","fbn":"Algunos datos no encajan; esta es la respuesta más cercana. Casillas en conflicto (borde rojo)","need4":"Con estos datos harían falta al menos {n} premios, pero solo hay 3. Revisa la posición de los «!».","nopl":"Alrededor de estos «!» no hay ninguna casilla donde pueda haber un premio. Revisa los «!» y las ✕ y ★ cercanas.","fin3":"Ya están los 3 premios, pero queda algún «!» marcado. Revisa la posición de los «!».","qn":"¿Cómo se ve ahora esta casilla en el juego?"},
-"pt":{"t":"Ajuda Decoder","lang":"Português","st":"Começar no meio da partida pode deixar as chances menos precisas. Recomendamos começar desde o início.","hint":"Dica","undo":"Desfazer","reset":"Recomeçar","tip0":"Escolha uma ferramenta abaixo (✕ / ! / Vazia / Prêmio) e toque nas casas abertas no início. Toque de novo na mesma casa para limpar. Depois toque em Dica.","tip1":"Toque em Dica para ver a próxima casa. Abra-a no jogo, toque nela aqui e informe o resultado.","vn":"O \"!\" ao lado do prêmio sumiu. Se ele ainda aparece no jogo, toque nessa casa: o \"!\" volta e as chances são recalculadas.","b":"Vazia","h":"Aviso (!)","f":"Prêmio","rec":"Tente: {c} ({p}% prêmio)","done":"Os 3 prêmios foram encontrados! 🎉","bad":"Dados conflitantes. Use Desfazer para conferir.","n":"Toques {a} · Prêmios {b}/3 · Números = chance de prêmio (%)","lab":"Linha {r}, nº {c}","warn":"⚠️ Depois de achar um prêmio, marque sem falta todos os «!» que continuarem no jogo. Se esquecer algum, a casa correta será aberta por último.","calc":"Calculando…","badc":"Casas que não combinam (borda vermelha)","fbn":"Alguns dados não combinam; esta é a resposta mais próxima. Casas em conflito (borda vermelha)","need4":"Com esses dados seriam necessários pelo menos {n} prêmios, mas só existem 3. Confira a posição dos «!».","nopl":"Ao redor desses «!» não há nenhuma casa onde possa haver um prêmio. Confira os «!» e os ✕ e ★ próximos.","fin3":"Os 3 prêmios já foram encontrados, mas ainda há «!» marcados. Confira a posição dos «!».","qn":"Como esta casa aparece agora no jogo?"}
-};
+const XM=(()=>{try{return /[?&]x=6(&|$)/.test(location.search)}catch(e){return false}})();
+const EX_FROM=0;        /* 클릭 횟수 조건 없음 */
+let EX_MAXN=200;        /* 후보가 이 개수 이하일 때만 완전탐색 (화면 입력칸에서 변경 가능) */
+const EX_BUD=Infinity;   /* 계산 호출 한도 없음 */
+const EX_MS=Infinity;   /* 계산 시간 한도 없음 (완전탐색은 x=6일 때만 실행됨) */
+let exCalls=0,exT0=0;const exMemo=new Map();
+const exCode=t=>t[0]*1764+t[1]*42+t[2];
+function exKey(cf,F,op,H){
+ let h1=5381,h2=52711;
+ for(const t of cf){const c=exCode(t);h1=(Math.imul(h1,33)^c)|0;h2=(Math.imul(h2,31)+c)|0}
+ let o1=0,o2=0,f1=0,f2=0;
+ for(let i=0;i<21;i++){o1|=op[i]<<i;o2|=op[i+21]<<i;f1|=F[i]<<i;f2|=F[i+21]<<i}
+ return h1+','+h2+','+cf.length+','+o1+','+o2+','+f1+','+f2+'|'+H.join(',')}
+function exSig(t,x,F,H){
+ const unf=t.filter(a=>!F[a]);
+ if(t.includes(x)){let s='f';for(const h of H)s+=unf.some(a=>a!==x&&ADJ[h*42+a])?'1':'0';return s}
+ return unf.some(a=>ADJ[x*42+a])?'h':'b'}
+function exSplit(cf,x,F,H){const m=new Map();for(const t of cf){const s=exSig(t,x,F,H);let g=m.get(s);if(!g){g=[];m.set(s,g)}g.push(t)}return m}
+function exNext(s,x,F,op,H){
+ const op2=op.slice();op2[x]=1;
+ if(s[0]=='f'){const F2=F.slice();F2[x]=1;return[F2,op2,H.filter((_,i)=>s[1+i]=='1')]}
+ if(s=='h')return[F,op2,H.concat([x])];
+ NB[x].forEach(j=>op2[j]=1);return[F,op2,H]}
+function exCheck(){if(++exCalls>EX_BUD||((exCalls&255)==0&&Date.now()-exT0>EX_MS))throw new Error('budget')}
+function exV(cf,F,op,H,k){
+ if(k==0)return 0;if(cf.length==1)return k;
+ exCheck();
+ const kk=exKey(cf,F,op,H);if(exMemo.has(kk))return exMemo.get(kk);
+ let bs=1e9;
+ for(let x=0;x<42;x++){if(op[x])continue;
+  const v=exVal(x,cf,F,op,H,k,bs);if(v<bs)bs=v}
+ exMemo.set(kk,bs);return bs}
+function exVal(x,cf,F,op,H,k,lim){
+ const m=exSplit(cf,x,F,H);
+ if(m.size==1&&[...m.keys()][0][0]!='f')return 1e9;
+ let v=1;
+ for(const[s,g]of m){const[F2,op2,H2]=exNext(s,x,F,op,H);v+=g.length/cf.length*exV(g,F2,op2,H2,s[0]=='f'?k-1:k);if(v>=lim)return v}
+ return v}
+/* 반환: 칸 번호(0~41) / -1 해당 없음 / -2 시간·계산량 초과 / -3 후보가 너무 많음 */
+function exPrep(){ /* 완전탐색 준비: 숫자(-1/-3)면 그대로 결과, 객체면 탐색 입력 */
+ const cf=cands(),N=cf.length,k=3-found().length;
+ if(!XM||S.lang!=='ko')return -1; /* x=6 이고 한국어일 때만 완전탐색 */
+ if(N<2||k<1)return -1;
+ if(N>EX_MAXN)return -3;
+ const F=new Uint8Array(42),op=new Uint8Array(42);
+ found().forEach(i=>F[i]=1);opened().forEach(i=>op[i]=1);
+ const c0=new Uint32Array(42);cf.forEach(t=>t.forEach(i=>c0[i]++));
+ for(let i=0;i<42;i++)if(c0[i]==0||c0[i]==N)op[i]=1; /* 0%·100% 확정 칸은 탐색 대상에서 제외(열린 칸 취급) */
+ const H=C.map((_,i)=>i).filter(i=>state(i)=='h');
+ return{cf,N,k,F,op,H}}
+function exSeq(p){ /* 한 코어(메인 스레드)로 순서대로 탐색 — 병렬을 못 쓸 때의 대체 경로 */
+ const{cf,k,F,op,H}=p;
+ exMemo.clear();exCalls=0;exT0=Date.now();
+ try{
+  let bs=1e9,bx=-1;
+  const xa=appChoice(cf,F,op,k); /* 기존 추천을 먼저 계산해 기준으로 삼음(동점이면 기존 추천 유지) */
+  if(xa>=0&&!op[xa]){bs=exVal(xa,cf,F,op,H,k,1e9);bx=xa}
+  for(let x=0;x<42;x++){if(op[x]||x==xa)continue;const v=exVal(x,cf,F,op,H,k,bs);if(v<bs-1e-9){bs=v;bx=x}}
+  if(bx<0)return -1;
+  return bx
+ }catch(e){if(e.message!=='budget')throw e;return -2}
+ finally{exMemo.clear()}}
+function exRec(){const p=exPrep();return typeof p=='number'?p:exSeq(p)}
 
-/* 잘못 눌렀을 때 안내 */
-const OOPS={
-"ko":"잘못 눌렀다면 '{u}'를 눌러주세요.",
-"ja":"間違えた場合は「{u}」を押してください。",
-"zh":"如果点错了，请按“{u}”。",
-"zh-TW":"如果點錯了，請按「{u}」。",
-"id":"Jika salah ketuk, tekan “{u}”.",
-"vi":"Nếu chạm nhầm, hãy nhấn “{u}”.",
-"th":"ถ้าแตะผิด ให้กด “{u}”",
-"hi":"अगर गलत दब गया हो, तो “{u}” दबाएँ।",
-"ar":"إذا ضغطت بالخطأ، اضغط «{u}».",
-"tr":"Yanlış dokunduysan “{u}” düğmesine bas.",
-"en":"If you tapped the wrong one, press \"{u}\".",
-"de":"Falls du dich vertippt hast, tippe auf „{u}“.",
-"fr":"En cas d'erreur, appuyez sur « {u} ».",
-"it":"Se hai toccato per sbaglio, premi “{u}”.",
-"pl":"Jeśli pomyłkowo wybrano, naciśnij „{u}”.",
-"ru":"Если нажали не туда, нажмите «{u}».",
-"es":"Si te has equivocado, pulsa «{u}».",
-"pt":"Se tocou errado, toque em «{u}»."
-};
+/* ── 병렬 완전탐색: Web Worker 여러 개가 칸(첫 수 후보)을 하나씩 가져가 계산 ── */
+let exPool=null,exSid=0;
+function exWorkerSrc(){
+ return 'const NB='+JSON.stringify(NB)+';const ADJ=new Uint8Array('+JSON.stringify(Array.from(ADJ))+');'
+  +'let exCalls=0,exT0=0;const EX_BUD=Infinity,EX_MS=Infinity;const exMemo=new Map();let cur=-1;\n'
+  +'const exCode='+exCode.toString()+';\n'
+  +[exKey,exSig,exSplit,exNext,exCheck,exV,exVal].map(f=>f.toString()).join('\n')
+  +'\nonmessage=e=>{const m=e.data;if(m.sid!==cur){cur=m.sid;exMemo.clear()}'
+  +'const v=exVal(m.x,m.cf,Uint8Array.from(m.F),Uint8Array.from(m.op),m.H,m.k,m.lim);'
+  +'postMessage({sid:m.sid,x:m.x,v})};'}
+function exPoolGet(){
+ if(exPool)return exPool;
+ const hc=(typeof navigator!=='undefined'&&navigator.hardwareConcurrency)||4;
+ const n=Math.max(2,Math.min(16,hc-1)); /* 브라우저용 스레드 1개는 남김 (i5-14400: 16스레드 → 15개) */
+ const url=URL.createObjectURL(new Blob([exWorkerSrc()],{type:'text/javascript'}));
+ const pool=[];for(let i=0;i<n;i++)pool.push(new Worker(url));
+ exPool=pool;return pool}
+/* 반환: Promise — exRec()와 같은 값(칸 번호 / -1 / -3). 병렬을 못 쓰면 exSeq로 대체 */
+function exRecPar(){
+ const p=exPrep();
+ if(typeof p=='number')return Promise.resolve(p);
+ if(typeof Worker=='undefined'||typeof Blob=='undefined')return Promise.resolve(exSeq(p));
+ let pool;try{pool=exPoolGet()}catch(e){console.error(e);exPool=null;return Promise.resolve(exSeq(p))}
+ const{cf,k,F,op,H}=p;
+ const xa=appChoice(cf,F,op,k); /* 기존 추천: 동점일 때 우선 */
+ const xs=[];if(xa>=0&&!op[xa])xs.push(xa);
+ for(let x=0;x<42;x++)if(!op[x]&&x!=xa)xs.push(x);
+ const sid=++exSid,fa=Array.from(F),oa=Array.from(op);
+ return new Promise(resolve=>{
+  let next=0,done=0,lim=1e9,over=false;const res=[];
+  const fail=e=>{if(over)return;over=true;console.error(e);exPool&&exPool.forEach(w=>w.terminate());exPool=null;resolve(exSeq(p))};
+  const fin=()=>{
+   if(over)return;over=true;
+   res.sort((a,b)=>a.x==xa?-1:b.x==xa?1:a.x-b.x); /* xa 먼저, 나머지는 칸 번호 순 — 순차 탐색과 같은 동점 처리 */
+   let bv=1e9,bx=-1;
+   for(const m of res)if(bx<0||m.v<bv-1e-9){bv=m.v;bx=m.x}
+   resolve(bx<0?-1:bx)};
+  const send=w=>{if(next>=xs.length)return;w.postMessage({sid,x:xs[next++],cf,F:fa,op:oa,H,k,lim})};
+  pool.forEach(w=>{
+   w.onmessage=e=>{const m=e.data;if(m.sid!==sid||over)return;
+    res.push(m);if(m.v<lim)lim=m.v; /* 지금까지의 최선값을 다음 칸 계산의 가지치기 기준으로 사용 */
+    if(++done>=xs.length)fin();else send(w)};
+   w.onerror=fail;
+   send(w)});
+  if(!xs.length)fin()})}
+function state(i){
+ if(S.xs.has(i))return'x';
+ if(S.mode=='setup'){
+  if(S.fs.has(i))return'f';
+  if(S.hs.has(i))return'h';
+  if(S.bs.has(i))return'o';
+  return'c'}
+ const o=S.obs.find(o=>o.i==i);
+ if(o){if(o.k=='f')return'f';if(o.k=='h'){let r=null;eff().forEach(x=>{if(x.k=='r'&&x.i==i)r=x});return r&&!r.h?'o':'h'}return'o'}
+ return S.os.has(i)||S.obs.some(o=>o.k=='b'&&NB[o.i].includes(i))?'o':'c'}
 
-/* 검색용 국가 코드: 언어코드 -> [alpha-2, alpha-3, 숫자]. lang2.js의 LC2가 이어 붙음 */
-const LC={
- ko:['KR','KOR','410'],
- ja:['JP','JPN','392'],
- zh:['CN','CHN','156'],
- 'zh-TW':['TW','TWN','158','HK','HKG','344'],
- id:['ID','IDN','360'],
- vi:['VN','VNM','704'],
- th:['TH','THA','764'],
- hi:['IN','IND','356'],
- ar:['SA','SAU','682','EG','EGY','818','AE','ARE','784'],
- tr:['TR','TUR','792'],
- en:['GB','GBR','826','US','USA','840','AU','AUS','036','CA','CAN','124'],
- de:['DE','DEU','276','AT','AUT','040','CH','CHE','756'],
- fr:['FR','FRA','250','BE','BEL','056','RE','REU','638','GP','GLP','312','MQ','MTQ','474','GF','GUF','254','PF','PYF','258','NC','NCL','540','YT','MYT','175','PM','SPM','666','WF','WLF','876','BL','BLM','652','MF','MAF','663','MC','MCO','492','LU','LUX','442','CA','CAN','124','HT','HTI','332','MG','MDG','450','BI','BDI','108','RW','RWA','646','CD','COD','180','CG','COG','178','CI','CIV','384','CM','CMR','120','SN','SEN','686','ML','MLI','466','BF','BFA','854','NE','NER','562','TG','TGO','768','BJ','BEN','204','GA','GAB','266','GN','GIN','324','TD','TCD','148','CF','CAF','140','DJ','DJI','262','KM','COM','174','SC','SYC','690','VU','VUT','548','TN','TUN','788','DZ','DZA','012','MA','MAR','504'],
- it:['IT','ITA','380'],
- pl:['PL','POL','616'],
- ru:['RU','RUS','643'],
- es:['ES','ESP','724','MX','MEX','484','AR','ARG','032','BO','BOL','068','CR','CRI','188','CU','CUB','192','DO','DOM','214','EC','ECU','218','SV','SLV','222','GQ','GNQ','226','GT','GTM','320','HN','HND','340','NI','NIC','558','PA','PAN','591','PY','PRY','600','PR','PRI','630','UY','URY','858','VE','VEN','862'],
- pt:['PT','PRT','620','BR','BRA','076']
-};
-
-/* 언어 선택 화면의 묶음·순서 */
-const LG=[['ko','ja','zh','zh-TW'],['id','vi','th','hi'],['ar','tr'],['en','de','fr','it','pl','ru'],['es','pt']];
-
-const F=(s,o)=>s.replace(/\{(\w)\}/g,(_,k)=>o[k]);
-const LB=(t,i)=>`<span class="lb">${F(t.lab,{r:C[i].r+1,c:C[i].c+1})}</span>`;
-const W=()=>`<div class="warn">${((L[S.lang]||L.en).warn||L.en.warn).replace(/([.。।])\s*/,'$1<br>')}</div>`;
-const xmNote=()=>'';
-const exNote=t=>S.ex=='ok'?`<div class="nt">${t.exok||L.ko.exok}</div>`:S.ex=='fb'?`<div class="nt">${t.exfb||L.ko.exfb}</div>`:S.ex=='big'?`<div class="nt">${t.exbig||L.ko.exbig}</div>`:'';
-const brk=s=>s.replace(/([.。।])\s*(?=\S)/g,'$1<br>');
-const oops=t=>S.obs.length>S.n0?`<div class="nt">${F(OOPS[S.lang]||OOPS.en,{u:t.undo})}</div>`:'';
+function vanN(){
+ return S.obs.filter(o=>o.k=='h'&&state(o.i)=='o'&&lastR(o.i)).length}
+function lastReal(){
+ let r=null;S.obs.forEach(o=>{if('bhf'.includes(o.k)&&!o.manual)r=o});return r}
+function visH(){return[...new Set(S.obs.filter(o=>o.k=='h'&&state(o.i)=='h').map(o=>o.i))]}
+function impossible(){
+ const F=found(),E=eff().filter(o=>o.k=='h'||(o.k=='r'&&o.h));
+ const mk=new Set(S.obs.filter(o=>o.k=='b'||o.k=='h').map(o=>o.i));
+ const need=E.filter(o=>!NB[o.i].some(j=>F.includes(j)&&!o.F.includes(j)));
+ const opts=o=>NB[o.i].filter(j=>!S.xs.has(j)&&!S.os.has(j)&&!F.includes(j)&&!mk.has(j)&&!o.F.includes(j));
+ const nop=need.filter(o=>!opts(o).length);
+ if(nop.length)return{k:'noplace',cells:[...new Set(nop.map(o=>o.i))]};
+ const ch=new Set();
+ const dfs=lim=>{const o=need.find(o=>!opts(o).some(j=>ch.has(j)));if(!o)return true;if(!lim)return false;
+  for(const j of opts(o)){ch.add(j);const r=dfs(lim-1);ch.delete(j);if(r)return true}return false};
+ let m=0;while(m<7&&!dfs(m))m++;
+ return F.length+m>3?{k:'many',n:F.length+m,cells:visH()}:null}
+function fallback(){
+ const F=found();if(F.length>=3)return null;
+ const cl=(S.cl||[]).filter(i=>!S.xs.has(i)&&!S.obs.some(o=>o.i==i));
+ if(cl.length&&cl.length<=3-F.length)return{i:cl[0],p:1,sure:true};
+ const E=eff();let bv=1e9,cnt=new Map(),n=0;
+ for(const t of T){if(t.some(i=>S.xs.has(i)||S.os.has(i))||!F.every(i=>t.includes(i)))continue;
+  const v=E.filter(o=>!ok(t,o)).length;
+  if(v>bv)continue;
+  if(v<bv){bv=v;cnt=new Map();n=0}
+  n++;t.forEach(i=>{if(!F.includes(i))cnt.set(i,(cnt.get(i)||0)+1)})}
+ if(!n)return null;
+ let r=-1,m=0,pc=0;cnt.forEach((c,i)=>{const sc=c+((S.cl||[]).includes(i)?.5:0);if(sc>m){m=sc;r=i;pc=c}});
+ return r<0?null:{i:r,p:pc/n}}
+function openRec(){
+ if(S.xs.size!=2||S.os.size||S.n0)return null;
+ const xk=[...S.xs].sort((a,b)=>a-b).join(',');
+ if(!S.obs.length){const r=OPEN1[xk];return r===undefined?null:r}
+ if(S.obs.length==1){const o=S.obs[0];if(o.manual||!'bhf'.includes(o.k))return null;const r=OPEN2[xk+'|'+o.i+'|'+o.k];return r===undefined?null:r}
+ if(S.obs.length==2||(S.obs.length==3&&S.obs[2].k=='r'&&S.obs[2].ans)){
+  const o1=S.obs[0],o2=S.obs[1];
+  if(o1.manual||o2.manual||!'bhf'.includes(o1.k)||!'bhf'.includes(o2.k))return null;
+  let key=xk+'|'+o1.i+'|'+o1.k+'|'+o2.i+'|'+o2.k;
+  if(S.obs.length==3)key+='|r'+(S.obs[2].h?1:0);
+  const r=OPEN3[key];return r===undefined?null:r}
+ return null}
