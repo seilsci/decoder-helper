@@ -111,7 +111,7 @@ function exVal(x,cf,F,op,H,k,lim){
  for(const[s,g]of m){const[F2,op2,H2]=exNext(s,x,F,op,H);v+=g.length/cf.length*exV(g,F2,op2,H2,s[0]=='f'?k-1:k);if(v>=lim)return v}
  return v}
 /* 반환: 칸 번호(0~41) / -1 해당 없음 / -2 시간·계산량 초과 / -3 후보가 너무 많음 */
-function exRec(){
+function exPrep(){ /* 완전탐색 준비: 숫자(-1/-3)면 그대로 결과, 객체면 탐색 입력 */
  const cf=cands(),N=cf.length,k=3-found().length;
  if(!XM)return -1; /* x=6 일 때만 완전탐색 */
  if(N<2||k<1)return -1;
@@ -121,6 +121,9 @@ function exRec(){
  const c0=new Uint32Array(42);cf.forEach(t=>t.forEach(i=>c0[i]++));
  for(let i=0;i<42;i++)if(c0[i]==0||c0[i]==N)op[i]=1; /* 0%·100% 확정 칸은 탐색 대상에서 제외(열린 칸 취급) */
  const H=C.map((_,i)=>i).filter(i=>state(i)=='h');
+ return{cf,N,k,F,op,H}}
+function exSeq(p){ /* 한 코어(메인 스레드)로 순서대로 탐색 — 병렬을 못 쓸 때의 대체 경로 */
+ const{cf,k,F,op,H}=p;
  exMemo.clear();exCalls=0;exT0=Date.now();
  try{
   let bs=1e9,bx=-1;
@@ -131,6 +134,53 @@ function exRec(){
   return bx
  }catch(e){if(e.message!=='budget')throw e;return -2}
  finally{exMemo.clear()}}
+function exRec(){const p=exPrep();return typeof p=='number'?p:exSeq(p)}
+
+/* ── 병렬 완전탐색: Web Worker 여러 개가 칸(첫 수 후보)을 하나씩 가져가 계산 ── */
+let exPool=null,exSid=0;
+function exWorkerSrc(){
+ return 'const NB='+JSON.stringify(NB)+';const ADJ=new Uint8Array('+JSON.stringify(Array.from(ADJ))+');'
+  +'let exCalls=0,exT0=0;const EX_BUD=Infinity,EX_MS=Infinity;const exMemo=new Map();let cur=-1;\n'
+  +'const exCode='+exCode.toString()+';\n'
+  +[exKey,exSig,exSplit,exNext,exCheck,exV,exVal].map(f=>f.toString()).join('\n')
+  +'\nonmessage=e=>{const m=e.data;if(m.sid!==cur){cur=m.sid;exMemo.clear()}'
+  +'const v=exVal(m.x,m.cf,Uint8Array.from(m.F),Uint8Array.from(m.op),m.H,m.k,m.lim);'
+  +'postMessage({sid:m.sid,x:m.x,v})};'}
+function exPoolGet(){
+ if(exPool)return exPool;
+ const hc=(typeof navigator!=='undefined'&&navigator.hardwareConcurrency)||4;
+ const n=Math.max(2,Math.min(16,hc-1)); /* 브라우저용 스레드 1개는 남김 (i5-14400: 16스레드 → 15개) */
+ const url=URL.createObjectURL(new Blob([exWorkerSrc()],{type:'text/javascript'}));
+ const pool=[];for(let i=0;i<n;i++)pool.push(new Worker(url));
+ exPool=pool;return pool}
+/* 반환: Promise — exRec()와 같은 값(칸 번호 / -1 / -3). 병렬을 못 쓰면 exSeq로 대체 */
+function exRecPar(){
+ const p=exPrep();
+ if(typeof p=='number')return Promise.resolve(p);
+ if(typeof Worker=='undefined'||typeof Blob=='undefined')return Promise.resolve(exSeq(p));
+ let pool;try{pool=exPoolGet()}catch(e){console.error(e);exPool=null;return Promise.resolve(exSeq(p))}
+ const{cf,k,F,op,H}=p;
+ const xa=appChoice(cf,F,op,k); /* 기존 추천: 동점일 때 우선 */
+ const xs=[];if(xa>=0&&!op[xa])xs.push(xa);
+ for(let x=0;x<42;x++)if(!op[x]&&x!=xa)xs.push(x);
+ const sid=++exSid,fa=Array.from(F),oa=Array.from(op);
+ return new Promise(resolve=>{
+  let next=0,done=0,lim=1e9,over=false;const res=[];
+  const fail=e=>{if(over)return;over=true;console.error(e);exPool&&exPool.forEach(w=>w.terminate());exPool=null;resolve(exSeq(p))};
+  const fin=()=>{
+   if(over)return;over=true;
+   res.sort((a,b)=>a.x==xa?-1:b.x==xa?1:a.x-b.x); /* xa 먼저, 나머지는 칸 번호 순 — 순차 탐색과 같은 동점 처리 */
+   let bv=1e9,bx=-1;
+   for(const m of res)if(bx<0||m.v<bv-1e-9){bv=m.v;bx=m.x}
+   resolve(bx<0?-1:bx)};
+  const send=w=>{if(next>=xs.length)return;w.postMessage({sid,x:xs[next++],cf,F:fa,op:oa,H,k,lim})};
+  pool.forEach(w=>{
+   w.onmessage=e=>{const m=e.data;if(m.sid!==sid||over)return;
+    res.push(m);if(m.v<lim)lim=m.v; /* 지금까지의 최선값을 다음 칸 계산의 가지치기 기준으로 사용 */
+    if(++done>=xs.length)fin();else send(w)};
+   w.onerror=fail;
+   send(w)});
+  if(!xs.length)fin()})}
 function state(i){
  if(S.xs.has(i))return'x';
  if(S.mode=='setup'){
