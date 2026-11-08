@@ -74,7 +74,7 @@ function deepRec(){
 
 const XM=(()=>{try{return /[?&]x=6(&|$)/.test(location.search)}catch(e){return false}})();
 const EX_FROM=0;        /* 클릭 횟수 조건 없음 */
-const EX_MAXN=30;       /* 후보가 이 개수 이하일 때만 시도 */
+const EX_MAXN=30;       /* 살아 있는 칸수(어두운 칸 제외)가 이 개수 이하일 때 완전탐색 */
 const EX_BUD=Infinity;   /* 계산 호출 한도 없음 */
 const EX_MS=Infinity;   /* 계산 시간 한도 없음 (완전탐색은 x=6일 때만 실행됨) */
 let exCalls=0,exT0=0;const exMemo=new Map();
@@ -105,12 +105,17 @@ function exVal(x,cf,F,op,H,k,lim){
  let v=1;
  for(const[s,g]of m){const[F2,op2,H2]=exNext(s,x,F,op,H);v+=g.length/cf.length*exV(g,F2,op2,H2,s[0]=='f'?k-1:k);if(v>=lim)return v}
  return v}
-/* 반환: 칸 번호(0~41) / -1 해당 없음 / -2 시간·계산량 초과 / -3 후보가 너무 많음 */
+/* 살아 있는 칸수: 전체 42칸에서 어두운 칸(안 열렸고 어떤 후보에도 안 나오는 칸)을 뺀 개수 */
+function exCells(cf){
+ const u=new Set();cf.forEach(t=>t.forEach(i=>u.add(i)));
+ let n=0;for(let i=0;i<42;i++){if(!(state(i)=='c'&&!u.has(i)))n++}
+ return n}
+/* 반환: 칸 번호(0~41) / -1 해당 없음 / -2 시간·계산량 초과 / -3 칸수가 너무 많음 */
 function exRec(){
  const cf=cands(),N=cf.length,k=3-found().length;
  if(!XM)return -1; /* x=6 일 때만 완전탐색 */
  if(N<2||k<1)return -1;
- if(N>EX_MAXN)return -3;
+ if(exCells(cf)>EX_MAXN)return -3;
  const F=new Uint8Array(42),op=new Uint8Array(42);
  found().forEach(i=>F[i]=1);opened().forEach(i=>op[i]=1);
  const H=C.map((_,i)=>i).filter(i=>state(i)=='h');
@@ -177,8 +182,3 @@ function openRec(){
   if(S.obs.length==3)key+='|r'+(S.obs[2].h?1:0);
   const r=OPEN3[key];return r===undefined?null:r}
  return null}
-function exDebug(){
- if(!XM)return '';
- const N=cands().length,k=3-found().length;
- let r;try{r=exRec()}catch(e){r='ERR '+e.message}
- return '[x=6 디버그] 후보 '+N+'개 · 남은 당첨 '+k+' · 한도 '+EX_MAXN+' · exRec='+r}
