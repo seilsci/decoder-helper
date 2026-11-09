@@ -56,7 +56,7 @@ const LC={
  vi:['VN','VNM','704'],
  th:['TH','THA','764'],
  hi:['IN','IND','356'],
- ar:['SA','SAU','682','EG','EGY','818','AE','ARE','784'],
+ ar:['SA','SAU','682','EG','EGY','818','AE','ARE','784','LB','LBN','422'],
  tr:['TR','TUR','792'],
  en:['GB','GBR','826','US','USA','840','AU','AUS','036','CA','CAN','124'],
  de:['DE','DEU','276','AT','AUT','040','CH','CHE','756'],
