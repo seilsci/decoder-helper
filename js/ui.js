@@ -27,11 +27,9 @@ function buildLg(){
  ov.innerHTML='<div class="lgl"><div class="lgh">Enter your country code to find your language.<br>e.g. Korean: KR or KOR</div><input id="lq" type="text" placeholder="KR / KOR" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"><div class="lgg" id="lgb"></div><div class="lpg"><button data-a="pg:-1" id="lpp">◀</button><span id="lpi"></span><button data-a="pg:1" id="lpn">▶</button></div></div>'}
 function fillLg(){
  const a=langList(),P=Math.max(1,Math.ceil(a.length/LPG));
- S.pg=Math.min(Math.max(S.pg,0),P-1);
+ S.pg=((S.pg%P)+P)%P; /* 순환: 1페이지에서 ◀ → 마지막, 마지막에서 ▶ → 1페이지 */
  document.getElementById('lgb').innerHTML=a.length?a.slice(S.pg*LPG,S.pg*LPG+LPG).map(k=>`<button data-a="L:${k}"${k==S.lang?' class="p"':''}>${L[k].lang}</button>`).join(''):'<div class="lgh" style="grid-column:1/-1">No match</div>';
- document.getElementById('lpi').textContent=(S.pg+1)+' / '+P;
- document.getElementById('lpp').disabled=S.pg<=0;
- document.getElementById('lpn').disabled=S.pg>=P-1}
+ document.getElementById('lpi').textContent=(S.pg+1)+' / '+P}
 
 function render(){
  const t=L[S.lang],play=S.mode=='play',A=play?analyze():null,PQ=play?pend():[];
