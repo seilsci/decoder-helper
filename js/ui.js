@@ -6,9 +6,8 @@ const LRTL=['ar','he','fa','prs','ps','ug','yi','ckb','sd','ur','dv']; /* 오른
 const LBRK=s=>s.replace(/([.。।։።།។။۔])\s*(?=\S)/g,'$1<br>'); /* 문장 끝 부호: . 。 । ։ ። ། ។ ။ ۔ */
 const LPG=18; /* 한 페이지 개수: 기존 언어 18개가 1페이지, 추가 언어는 2페이지부터 */
 
-/* ── 기보 수집: 훈수 버튼 후 3번째 당첨까지 60초 이상 걸린 판만 구글 시트로 전송 ── */
 const REC_URL='https://script.google.com/macros/s/AKfycbw_6H2IjYti4RM224PFnpQDknAGaF9g0Rjkel9GvOr---5WEJZzPMIOpIhhqGJShp1QqA/exec';
-const REC_MIN_MS=60000; /* 테스트할 때만 0으로 바꿨다가 되돌릴 것 */
+const REC_MIN_MS=30000;
 const lab=i=>(C[i].r+1)+'-'+(C[i].c+1);
 function track(){
  if(S.mode!=='play'||S.n0!==0||!S.t0||found().length<3||S.xs.size!==2)return;
