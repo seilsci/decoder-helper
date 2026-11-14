@@ -7,7 +7,7 @@ const LBRK=s=>s.replace(/([.。।։።།។။۔])\s*(?=\S)/g,'$1<br>'); /* �
 const LPG=18; /* 한 페이지 개수: 기존 언어 18개가 1페이지, 추가 언어는 2페이지부터 */
 
 /* ── 기보 수집: 훈수 버튼 후 3번째 당첨까지 60초 이상 걸린 판만 구글 시트로 전송 ── */
-const REC_URL='https://script.google.com/macros/s/AKfycbxpfKNoMdBoQSVL7FsfNys1_upwaNOHRCK46RrbwL4uMpU9b8WNlcCTI1rLkirx3DgrHg/exec';
+const REC_URL='https://script.google.com/macros/s/AKfycbw_6H2IjYti4RM224PFnpQDknAGaF9g0Rjkel9GvOr---5WEJZzPMIOpIhhqGJShp1QqA/exec';
 const REC_MIN_MS=60000; /* 테스트할 때만 0으로 바꿨다가 되돌릴 것 */
 const lab=i=>(C[i].r+1)+'-'+(C[i].c+1);
 function track(){
