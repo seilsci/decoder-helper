@@ -5,10 +5,24 @@ if(typeof LC2!=='undefined')for(const k in LC2)LCODES[k]=[...new Set((LCODES[k]|
 const LRTL=['ar','he','fa','prs','ps','ug','yi','ckb','sd','ur','dv']; /* 오른쪽→왼쪽 언어: 안내 메시지·하단 카운트 방향 */
 const LBRK=s=>s.replace(/([.。।։።།។။۔])\s*(?=\S)/g,'$1<br>'); /* 문장 끝 부호: . 。 । ։ ። ། ។ ။ ۔ */
 const LPG=18; /* 한 페이지 개수: 기존 언어 18개가 1페이지, 추가 언어는 2페이지부터 */
+
+/* ── 기보 수집: 훈수 버튼 후 3번째 당첨까지 60초 이상 걸린 판만 구글 시트로 전송 ── */
+const REC_URL='https://script.google.com/macros/s/AKfycbxpfKNoMdBoQSVL7FsfNys1_upwaNOHRCK46RrbwL4uMpU9b8WNlcCTI1rLkirx3DgrHg/exec';
+const REC_MIN_MS=60000; /* 테스트할 때만 0으로 바꿨다가 되돌릴 것 */
+const lab=i=>(C[i].r+1)+'-'+(C[i].c+1);
+function track(){
+ if(S.mode!=='play'||S.n0!==0||!S.t0||found().length<3||S.xs.size!==2)return;
+ const X=[...S.xs].sort((a,b)=>a-b),Y=found().slice().sort((a,b)=>a-b);
+ const line='x : '+X.map(lab).join(' ')+' y : '+Y.map(lab).join(' ');
+ if(S.sent===line||Date.now()-S.t0<REC_MIN_MS)return;
+ S.sent=line;
+ try{fetch(REC_URL,{method:'POST',mode:'no-cors',body:line,keepalive:true})}catch(e){}
+}
+
 function load(){try{const v=localStorage.getItem('dh_lang');if(v&&L[v])return v}catch(e){}return'ko'}
 function save(){try{localStorage.setItem('dh_lang',S.lang)}catch(e){}}
 let S;
-function init(){S={lang:S?S.lang:load(),ov:false,q:'',pg:0,sh:[],mode:'setup',tool:'x',xs:new Set(),hs:new Set(),bs:new Set(),os:new Set(),fs:new Set(),obs:[],n0:0,rec:null,sel:null,ex:null}}
+function init(){S={lang:S?S.lang:load(),ov:false,q:'',pg:0,sh:[],mode:'setup',tool:'x',xs:new Set(),hs:new Set(),bs:new Set(),os:new Set(),fs:new Set(),obs:[],n0:0,rec:null,sel:null,ex:null,t0:0,sent:''}}
 init();
 function go(){if(!pend().length)hint()}
 
@@ -104,7 +118,7 @@ function act(a){
  else if(a.startsWith('L:')){S.lang=a.slice(2);S.ov=false;save()}
  else if(a=='hint'){
   if(S.mode=='play'&&pend().length)return;
-  if(S.mode=='setup'){S.cl=C.map((_,i)=>i).filter(i=>state(i)=='c');const F0=[...S.fs];S.os=new Set(S.bs);S.obs=F0.map(i=>({i,k:'f',F:[]})).concat([...S.hs].map(i=>({i,k:'h',F:F0})));S.n0=S.obs.length;S.mode='play'}
+  if(S.mode=='setup'){S.cl=C.map((_,i)=>i).filter(i=>state(i)=='c');const F0=[...S.fs];S.os=new Set(S.bs);S.obs=F0.map(i=>({i,k:'f',F:[]})).concat([...S.hs].map(i=>({i,k:'h',F:F0})));S.n0=S.obs.length;S.mode='play';S.t0=Date.now()}
   hint()}
  else if(a=='undo'){
   if(S.mode=='play'){if(S.obs.length>S.n0)undoObs();else{S.obs=[];S.mode='setup'}}
@@ -116,6 +130,6 @@ function act(a){
  else if('bhf'.includes(a)&&S.sel!=null){addObs(S.sel,a);S.sel=null;S.rec=null;go()}}
 document.onclick=e=>{if(S.busy)return;const el=e.target.closest('[data-a],[data-i]');if(!el)return;
  if(el.id=='ov'&&e.target!==el)return; /* 오버레이 안쪽(입력창·빈 공간) 클릭은 닫지 않음, 어두운 배경만 닫기 */
- if(el.dataset.i!==undefined){const n=S.obs.length;tap(+el.dataset.i);if(S.mode=='play'&&S.obs.length!=n)go()}else act(el.dataset.a);render()};
+ if(el.dataset.i!==undefined){const n=S.obs.length;tap(+el.dataset.i);if(S.mode=='play'&&S.obs.length!=n)go()}else act(el.dataset.a);render();track()};
 document.addEventListener('input',e=>{if(e.target.id=='lq'){S.q=e.target.value;S.pg=0;fillLg()}});
 render();
