@@ -15,8 +15,13 @@ function track(){
  const line='x : '+X.map(lab).join(' ')+' y : '+Y.map(lab).join(' ');
  if(S.sent===line||Date.now()-S.t0<REC_MIN_MS)return;
  S.sent=line;
- try{fetch(REC_URL,{method:'POST',mode:'no-cors',body:line,keepalive:true})}catch(e){}
+ const clicks=S.obs.filter(o=>'bhf'.includes(o.k)&&!o.manual).length-S.n0; /* 화면 하단 카운트와 같은 값 */
+ const secs=Math.round((Date.now()-S.t0)/1000);
+ const lang=String((L[S.lang]&&L[S.lang].lang)||S.lang).replace(/[\t\r\n]/g,' ');
+ const body=line+'\t'+clicks+'\t'+secs+'\t'+lang;
+ try{fetch(REC_URL,{method:'POST',mode:'no-cors',body:body,keepalive:true})}catch(e){}
 }
+ 
 
 function load(){try{const v=localStorage.getItem('dh_lang');if(v&&L[v])return v}catch(e){}return'ko'}
 function save(){try{localStorage.setItem('dh_lang',S.lang)}catch(e){}}
