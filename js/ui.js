@@ -103,9 +103,21 @@ function tap(i){
    S.obs=S.obs.filter(o=>!(o.i==i&&(o.manual||o.k=='r'))&&!(o.k=='t'&&o.r&&o.r.i==i));S.rec=null}
   else if(s=='c')S.sel=i}}
 function progHtml(t){return S.prog?`<div class="nt">${F(t.exprog||L.ko.exprog,{a:S.prog.a,b:S.prog.b,c:(S.prog.ms/1000).toFixed(1)})}</div>`:''}
+
+const AUTO_ALL=false; /* true면 x=6이 아니어도 자동 완료. false면 x=6일 때만 */
+function autoFinish(){ /* 남은 당첨이 전부 100% 확정이면 자동으로 당첨 처리하고 완료(클릭 수에도 반영) */
+ if(!(XM||AUTO_ALL)||S.mode!=='play')return;
+ for(let g=0;g<3;g++){
+  if(pend().length)return;
+  const k=3-found().length;if(k<1)return;
+  const A=analyze();if(!A.N)return;
+  const sure=[];for(let x=0;x<42;x++)if(A.p[x]>=.999999)sure.push(x);
+  if(sure.length!==k)return; /* 100% 칸 수 = 남은 당첨 수 일 때만 */
+  addObs(sure[0],'f')}}
+
 function hint(){S.sel=null;S.rec=null;S.fb=false;S.sure=false;S.imp=null;S.ex=null;S.prog=null;S.busy=true;setTimeout(()=>{
  let wait=false;
- try{S.rec=openRec();if(S.rec==null)S.rec=deepRec();
+ try{autoFinish();S.rec=openRec();if(S.rec==null)S.rec=deepRec();
   if(found().length>=3){if(!cands().length)S.imp={k:'fin3',cells:visH()}}
   else if(S.rec<0&&!cands().length){S.imp=impossible();const f=S.imp?null:fallback();if(f){S.rec=f.i;S.fb=true;S.fbp=f.p;S.sure=!!f.sure}}
   else if(XM&&S.rec>=0&&clicks()>=EX_FROM){wait=true;
@@ -113,7 +125,7 @@ function hint(){S.sel=null;S.rec=null;S.fb=false;S.sure=false;S.imp=null;S.ex=nu
     .then(r=>{if(r>=0){S.rec=r;S.ex='ok'}else if(r==-2)S.ex='fb';else if(r==-3)S.ex='big'})
     .catch(e=>console.error(e)).then(()=>{S.prog=null;S.busy=false;render()})}}
  catch(e){console.error(e);S.rec=-1}
- if(!wait){S.busy=false;render()}},40)}
+ if(!wait){S.busy=false;render();track()}},40)}
 function act(a){
  if(a=='lang'){S.ov=true;S.q='';S.pg=0;ov.innerHTML=''}
  else if(a=='ovx')S.ov=false;
