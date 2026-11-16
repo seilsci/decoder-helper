@@ -104,9 +104,8 @@ function tap(i){
   else if(s=='c')S.sel=i}}
 function progHtml(t){return S.prog?`<div class="nt">${F(t.exprog||L.ko.exprog,{a:S.prog.a,b:S.prog.b,c:(S.prog.ms/1000).toFixed(1)})}</div>`:''}
 
-const AUTO_ALL=false; /* true면 x=6이 아니어도 자동 완료. false면 x=6일 때만 */
 function autoFinish(){ /* 남은 당첨이 전부 100% 확정이면 자동으로 당첨 처리하고 완료(클릭 수에도 반영) */
- if(!(XM||AUTO_ALL)||S.mode!=='play')return;
+ if(S.mode!=='play')return;
  for(let g=0;g<3;g++){
   if(pend().length)return;
   const k=3-found().length;if(k<1)return;
