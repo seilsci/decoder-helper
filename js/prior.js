@@ -12,19 +12,23 @@ const prW=(c,e)=>Math.pow((c+8*.075)/(e+8),PRIOR_POW);
 const PF=PRIOR_CNT.map((c,i)=>prW(c,PRIOR_EXPO[i]));
 
 /* 자동 갱신: 앱스 스크립트(REC_URL)의 doGet이 시트 prior 탭의 값을 JSON으로 돌려주면, 페이지가 다 열린 뒤 그 값으로 위 배열과 PF를 덮어씀.
-   불러오기에 실패하거나 값이 이상하면 위 내장값을 그대로 사용(오류가 나도 화면에는 영향 없음). 끄려면 PRIOR_AUTO를 false로 */
+   불러오기에 실패하거나 값이 이상하면 위 내장값을 그대로 사용(오류가 나도 화면에는 영향 없음). 끄려면 PRIOR_AUTO를 false로.
+   PRIOR_SRC는 현재 값의 출처 표시(디버그 줄에 나옴): 불러오는 중 / 시트 N판 / 내장값(실패: 이유) */
 const PRIOR_AUTO=true;
-let PRIOR_SRC='내장값';
+let PRIOR_SRC=PRIOR_AUTO?'불러오는 중':'내장값';
+function priorDone(){try{window.dispatchEvent(new Event('priorloaded'))}catch(e){}} /* 표시 갱신용 알림 */
 if(PRIOR_AUTO&&typeof window!=='undefined')window.addEventListener('load',function(){
- if(typeof fetch==='undefined'||typeof REC_URL==='undefined'||!REC_URL)return; /* REC_URL은 ui.js에 있음 */
- fetch(REC_URL+'?a=prior',{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.json()}).then(d=>{
+ if(typeof fetch==='undefined'||typeof REC_URL==='undefined'||!REC_URL){PRIOR_SRC='내장값(주소 없음)';priorDone();return} /* REC_URL은 ui.js에 있음 */
+ fetch(REC_URL+'?a=prior',{cache:'no-store'}).then(r=>{if(!r.ok)throw 'http '+r.status;return r.json()}).then(d=>{
+  if(!d||!Array.isArray(d.cnt)||!Array.isArray(d.ex))throw '응답 형식';
   const cnt=d.cnt.map(Number),ex=d.ex.map(Number);
-  if(cnt.length!==42||ex.length!==42)throw 0;
-  if(cnt.some(v=>!(v>=0))||ex.some((v,i)=>!(v>0&&v>=cnt[i])))throw 0; /* 값이 이상하면 버림 */
+  if(cnt.length!==42||ex.length!==42)throw '칸 수';
+  if(cnt.some(v=>!(v>=0))||ex.some((v,i)=>!(v>0&&v>=cnt[i])))throw '값 이상'; /* 값이 이상하면 버림 */
   cnt.forEach((c,i)=>{PRIOR_CNT[i]=c;PRIOR_EXPO[i]=ex[i];PF[i]=prW(c,ex[i])});
   PRIOR_SRC='시트 '+Math.max(...ex)+'판';
   if(typeof exPool!=='undefined'&&exPool){exPool.forEach(w=>w.terminate());exPool=null} /* 완전탐색 워커가 옛 값을 들고 있으면 새로 만들게 */
- }).catch(()=>{});
+  priorDone();
+ }).catch(e=>{PRIOR_SRC='내장값(실패: '+(e&&e.message?e.message:e)+')';priorDone()});
 });
 
 const prLf=(n,k)=>n&&k?k+.6*Math.log2(n):0;
