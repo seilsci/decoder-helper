@@ -39,6 +39,7 @@
   inp.value=v;EX_MAXN=v;upd();
  });
  new MutationObserver(upd).observe(m,{childList:true,subtree:true,characterData:true});
+ window.addEventListener('priorloaded',upd); /* prior.js가 시트 값을 받아오면 디버그 줄 갱신 */
  setTimeout(upd,0);
 })();
 </script>
