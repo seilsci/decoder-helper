@@ -5,8 +5,27 @@
 /* 칸별 당첨 횟수 / 그 칸이 ✕가 아니었던 판 수 (칸 번호 0~41, 행 우선). 판이 쌓이면 이 두 배열만 갱신 */
 const PRIOR_CNT=[14,9,9,7,4,12,16,16,14,10,12,4,3,5,14,16,9,15,19,12,6,4,5,16,17,8,23,20,8,9,12,22,18,7,12,9,9,9,5,8,19,8];
 const PRIOR_EXPO=[158,158,158,158,158,158,158,158,158,139,146,141,138,145,158,144,158,158,139,143,129,129,143,139,158,158,144,158,145,138,141,146,139,158,158,158,158,158,158,158,158,158];
-/* 칸별 당첨 가중치: 표본이 적은 칸이 튀지 않게 평균(3/40)쪽으로 약하게 당김. 후보(당첨 3칸 조합)의 가중치 = 세 칸 값의 곱 */
-const PF=PRIOR_CNT.map((c,i)=>(c+8*.075)/(PRIOR_EXPO[i]+8));
+/* 칸별 당첨 가중치: 표본이 적은 칸이 튀지 않게 평균(3/40)쪽으로 약하게 당긴 뒤 PRIOR_POW 제곱(0.5=제곱근)으로 편중을 완화.
+   실제 158판 교차검증에서 평균 클릭 수가 가장 낮았던 설정(균등 9.91 → 9.65). 1이면 원래 빈도 그대로, 0이면 균등 */
+const PRIOR_POW=0.5;
+const prW=(c,e)=>Math.pow((c+8*.075)/(e+8),PRIOR_POW);
+const PF=PRIOR_CNT.map((c,i)=>prW(c,PRIOR_EXPO[i]));
+
+/* 자동 갱신: 앱스 스크립트(REC_URL)의 doGet이 시트 prior 탭의 값을 JSON으로 돌려주면, 페이지가 다 열린 뒤 그 값으로 위 배열과 PF를 덮어씀.
+   불러오기에 실패하거나 값이 이상하면 위 내장값을 그대로 사용(오류가 나도 화면에는 영향 없음). 끄려면 PRIOR_AUTO를 false로 */
+const PRIOR_AUTO=true;
+let PRIOR_SRC='내장값';
+if(PRIOR_AUTO&&typeof window!=='undefined')window.addEventListener('load',function(){
+ if(typeof fetch==='undefined'||typeof REC_URL==='undefined'||!REC_URL)return; /* REC_URL은 ui.js에 있음 */
+ fetch(REC_URL+'?a=prior',{cache:'no-store'}).then(r=>{if(!r.ok)throw 0;return r.json()}).then(d=>{
+  const cnt=d.cnt.map(Number),ex=d.ex.map(Number);
+  if(cnt.length!==42||ex.length!==42)throw 0;
+  if(cnt.some(v=>!(v>=0))||ex.some((v,i)=>!(v>0&&v>=cnt[i])))throw 0; /* 값이 이상하면 버림 */
+  cnt.forEach((c,i)=>{PRIOR_CNT[i]=c;PRIOR_EXPO[i]=ex[i];PF[i]=prW(c,ex[i])});
+  PRIOR_SRC='시트 '+Math.max(...ex)+'판';
+  if(typeof exPool!=='undefined'&&exPool){exPool.forEach(w=>w.terminate());exPool=null} /* 완전탐색 워커가 옛 값을 들고 있으면 새로 만들게 */
+ }).catch(()=>{});
+});
 
 const prLf=(n,k)=>n&&k?k+.6*Math.log2(n):0;
 const prNeff=(W,S2)=>Math.exp(Math.log(W)-S2/W); /* 가중치 분포의 유효 후보 수(엔트로피 기준) */
