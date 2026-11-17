@@ -71,7 +71,7 @@ function prChoice(cf,F,op,k){
  const N=cf.length,w=cf.map(t=>PF[t[0]]*PF[t[1]]*PF[t[2]]),S={t:cf,w:w,wl:w.map(v=>v*Math.log(v))};
  return(N>3000?prBest(S,F,op,k,3,6):N>300?prBest(S,F,op,k,4,6):prBest(S,F,op,k,5,6))[1]}
 
-/* ── 기존 함수 덮어쓰기: XM(x=6)일 때만 새 방식, 아니면 원래 함수 호출 ── */
+/* ── 기존 함수 덮어쓰기: appChoice·openRec은 XM(x=6)일 때만 새 방식, 아니면 원래 함수 호출. exVal·exWorkerSrc는 완전탐색(x=6 전용)에서만 쓰이므로 조건 없이 교체 ── */
 (function(){
  const _appChoice=appChoice,_openRec=openRec;
  appChoice=function(cf,F,op,k){return XM?prChoice(cf,F,op,k):_appChoice(cf,F,op,k)}; /* deepRec·완전탐색의 기준 추천이 모두 이걸 거침 */
