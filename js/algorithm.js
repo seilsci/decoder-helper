@@ -31,7 +31,16 @@ function addObs(i,k){
     if(hs.size==1)S.obs.push({i:c,k:'r',h:[...hs][0],F:found(),ans:true,auto:true,fo:o})})}}}
 function qf(){for(let p=S.obs.length-1;p>=0;p--){if(S.obs[p].k=='f'&&S.obs[p].q)return S.obs[p]}return null}
 function pend(){const f=qf();return f?f.q.filter(c=>!S.obs.some(r=>r.k=='r'&&r.fo===f&&r.i==c)):[]}
-function answer(h){const q=pend();if(!q.length)return;S.obs.push({i:q[0],k:'r',h,F:found(),ans:true,fo:qf()})}
+function autoQ(){ /* 앞 질문에 답한 뒤 남은 ! 질문 중 후보 전부에서 답이 같아진 것은 묻지 않고 자동 처리(반복) */
+ const f=qf();if(!f)return;
+ for(let g=0;g<8;g++){
+  const cf=cands();if(!cf.length)return;
+  const F=found();let hit=false;
+  for(const c of pend()){
+   const hs=new Set(cf.map(t=>NB[c].some(j=>t.includes(j)&&!F.includes(j))));
+   if(hs.size==1){S.obs.push({i:c,k:'r',h:[...hs][0],F:found(),ans:true,auto:true,fo:f});hit=true;break}}
+  if(!hit)return}}
+function answer(h){const q=pend();if(!q.length)return;S.obs.push({i:q[0],k:'r',h,F:found(),ans:true,fo:qf()});autoQ()}
 function undoObs(){const o=S.obs.pop();if(o&&o.auto){while(S.obs.length&&S.obs[S.obs.length-1].auto&&S.obs[S.obs.length-1].fo===o.fo)S.obs.pop();S.obs.pop()}}
 function analyze(){
  const cf=cands(),N=cf.length,F=found(),op=opened();
@@ -74,7 +83,7 @@ function deepRec(){
 
 const XM=(()=>{try{return /[?&]x=6(&|$)/.test(location.search)}catch(e){return false}})();
 const EX_FROM=0;        /* 클릭 횟수 조건 없음 */
-let EX_MAXN=200;        /* 후보가 이 개수 이하일 때만 완전탐색 (화면 입력칸에서 변경 가능) */
+let EX_MAXN=30;         /* 후보가 이 개수 이하일 때만 완전탐색 (기본 30, 화면 입력칸에서 변경 가능) */
 const EX_BUD=Infinity;   /* 계산 호출 한도 없음 */
 const EX_MS=Infinity;   /* 계산 시간 한도 없음 (완전탐색은 x=6일 때만 실행됨) */
 let exCalls=0,exT0=0;const exMemo=new Map();
