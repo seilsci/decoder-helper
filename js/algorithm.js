@@ -42,6 +42,22 @@ function autoQ(){ /* 앞 질문에 답한 뒤 남은 ! 질문 중 후보 전부�
   if(!hit)return}}
 function answer(h){const q=pend();if(!q.length)return;S.obs.push({i:q[0],k:'r',h,F:found(),ans:true,fo:qf()});autoQ()}
 function undoObs(){const o=S.obs.pop();if(o&&o.auto){while(S.obs.length&&S.obs[S.obs.length-1].auto&&S.obs[S.obs.length-1].fo===o.fo)S.obs.pop();S.obs.pop()}}
+
+/* 100% 확정 칸 중 이웃에 '!' 칸이 있는 칸을 먼저 추천 (당첨을 찾으면 '!' 유지 여부로 옆 칸이 확정되므로 손해가 없음)
+   반환: 칸 번호(0~41) / -1 해당 없음. 이웃 '!' 칸이 가장 많은 칸을 고르고, 동률이면 번호가 작은 칸 */
+function sureRec(cf){
+ cf=cf||cands();
+ const N=cf.length,F=found();
+ if(!N||F.length>=3)return -1;
+ const op=opened(),hv=visH(),cnt=new Array(42).fill(0);
+ for(const t of cf)for(const i of t)cnt[i]++;
+ let r=-1,m=0;
+ for(let x=0;x<42;x++){
+  if(cnt[x]!=N||op.has(x))continue;
+  const n=hv.filter(h=>NB[x].includes(h)).length;
+  if(n>m){m=n;r=x}}
+ return r}
+
 function analyze(){
  const cf=cands(),N=cf.length,F=found(),op=opened();
  const ni=Array(42).fill(0),ex=Array(42).fill(0),bl=Array(42).fill(0);
@@ -49,8 +65,10 @@ function analyze(){
   for(let x=0;x<42;x++){if(op.has(x))continue;
    if(t.includes(x))ni[x]++;else if(NB[x].some(j=>un.includes(j)))ex[x]++;else bl[x]++}}
  let rec=-1,best=-1;
- if(N&&F.length<3)for(let x=0;x<42;x++){if(op.has(x))continue;
-  const sc=2*ni[x]/N+1-(ni[x]**2+ex[x]**2+bl[x]**2)/(N*N);if(sc>best){best=sc;rec=x}}
+ if(N&&F.length<3){
+  rec=sureRec(cf);
+  if(rec<0)for(let x=0;x<42;x++){if(op.has(x))continue;
+   const sc=2*ni[x]/N+1-(ni[x]**2+ex[x]**2+bl[x]**2)/(N*N);if(sc>best){best=sc;rec=x}}}
  return{N,p:ni.map(v=>N?v/N:0),rec}}
 const ADJ=new Uint8Array(1764);NB.forEach((l,x)=>l.forEach(a=>ADJ[x*42+a]=1));
 const lf=(n,k)=>n&&k?k+.6*Math.log2(n):0;
@@ -79,6 +97,7 @@ function deepRec(){
  const cf=cands(),F=new Uint8Array(42),op=new Uint8Array(42);
  found().forEach(i=>F[i]=1);opened().forEach(i=>op[i]=1);
  const k=3-found().length,N=cf.length;if(!N||!k)return -1;
+ const s=sureRec(cf);if(s>=0)return s; /* 100% 칸 + 이웃 '!' → 먼저 추천 */
  return appChoice(cf,F,op,k)}
 
 const XM=(()=>{try{return /[?&]x=6(&|$)/.test(location.search)}catch(e){return false}})();
@@ -120,10 +139,11 @@ function exVal(x,cf,F,op,H,k,lim){
  for(const[s,g]of m){const[F2,op2,H2]=exNext(s,x,F,op,H);v+=g.length/cf.length*exV(g,F2,op2,H2,s[0]=='f'?k-1:k);if(v>=lim)return v}
  return v}
 /* 반환: 칸 번호(0~41) / -1 해당 없음 / -2 시간·계산량 초과 / -3 후보가 너무 많음 */
-function exPrep(){ /* 완전탐색 준비: 숫자(-1/-3)면 그대로 결과, 객체면 탐색 입력 */
+function exPrep(){ /* 완전탐색 준비: 숫자(-1/-3/칸 번호)면 그대로 결과, 객체면 탐색 입력 */
  const cf=cands(),N=cf.length,k=3-found().length;
  if(!XM||S.lang!=='ko')return -1; /* x=6 이고 한국어일 때만 완전탐색 */
  if(N<2||k<1)return -1;
+ const s=sureRec(cf);if(s>=0)return s; /* 100% 칸 + 이웃 '!' → 후보 수와 상관없이 먼저 추천 */
  if(N>EX_MAXN)return -3;
  const F=new Uint8Array(42),op=new Uint8Array(42);
  found().forEach(i=>F[i]=1);opened().forEach(i=>op[i]=1);
