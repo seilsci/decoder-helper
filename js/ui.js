@@ -82,7 +82,7 @@ function render(){
  else if(S.sel!=null){const q=C[S.sel];
   m=`<b>${LB(t,S.sel)}</b> — ?<div class="row eq"><button data-a="b">${t.b}</button><button data-a="h">${t.h}</button>${never(S.sel)?'':`<button class="p" data-a="f">${t.f}</button>`}<button data-a="cancel">✕</button></div>`}
  else if(A.N==0&&!S.fb)m=LBRK(t.bad)+(CF.length?`<div class="nt2">${t.badc||L.en.badc}: ${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'')+nt;
- else if(S.rec!=null&&S.rec>=0){const q=C[S.rec];m=F(t.rec,{c:LB(t,S.rec),p:S.fb?pct(S.fbp):pct(A.p[S.rec])})+(S.fb&&!S.sure?`<div class="nt">${t.fbn||L.en.fbn}${CF.length?': '+CF.map(i=>LB(t,i)).join(' · '):''}</div>`:'')+exNote(t)+oops(t)+nt+(nt?'':`<div class="nt2">${LBRK(t.tip1.replace(/^[^.。।]*[.。।։።།។။۔]\s*/,''))}</div>`)}
+ else if(S.rec!=null&&S.rec>=0){const q=C[S.rec];m=F(t.rec,{c:LB(t,S.rec),p:S.fb?pct(S.fbp):pct(A.p[S.rec])})+(S.fb&&!S.sure?`<div class="nt">${t.fbn||L.en.fbn}${CF.length?': '+CF.map(i=>LB(t,i)).join(' · '):''}</div>`:'')+exNote(t)+(S.stopped?`<div class="nt">${S.stopped=='auto'?'첫 칸 계산이 '+(EX_FIRST_MS/1000)+'초 안에 끝나지 않아 완전탐색을 자동으로 중단했습니다.':'완전탐색을 중단했습니다.'} 기본 추천을 보여드립니다.</div>`:'')+oops(t)+nt+(nt?'':`<div class="nt2">${LBRK(t.tip1.replace(/^[^.。।]*[.。।։።།។။۔]\s*/,''))}</div>`)}
  else m=LBRK(t.tip1)+nt;
  msg.innerHTML=m;msg.dir=cn.dir=LRTL.includes(S.lang)?'rtl':'ltr';
  cn.textContent=play?F(t.n,{a:S.obs.filter(o=>'bhf'.includes(o.k)&&!o.manual).length-S.n0,b:found().length}):'';
@@ -108,10 +108,12 @@ function tap(i){
   else if(s=='h'&&S.obs.some(o=>o.i==i&&o.manual)){
    S.obs=S.obs.filter(o=>!(o.i==i&&(o.manual||o.k=='r'))&&!(o.k=='t'&&o.r&&o.r.i==i));S.rec=null}
   else if(s=='c'){
+   if(found().length>=3)return; /* 당첨 3개를 다 찾은 뒤에는 빈 칸 탭을 무시 (클릭 수가 늘어나지 않게) */
    const oc=outcome(i); /* 남은 후보 전부에서 결과가 같으면(당첨 100% / 느낌표 확정 / 빈칸 확정) 묻지 않고 바로 입력 */
-   if(oc){addObs(i,oc);S.rec=null}
+   if(oc){addObs(i,oc);S.rec=null;S.sel=null}
    else S.sel=i}}}
-function progHtml(t){return S.prog?`<div class="nt">${F(t.exprog||L.ko.exprog,{a:S.prog.a,b:S.prog.b,c:(S.prog.ms/1000).toFixed(1)})}</div>`:''}
+function progText(t){return F(t.exprog||L.ko.exprog,{a:S.prog.a,b:S.prog.b,c:(S.prog.ms/1000).toFixed(1)})}
+function progHtml(t){return S.prog?`<div class="nt" id="xpn">${progText(t)}</div><div class="row eq"><button data-a="stop">${t.stop||'중단'}</button></div>`:''}
 
 function autoFinish(){ /* 남은 당첨이 전부 100% 확정이면 자동으로 당첨 처리하고 완료(클릭 수에도 반영) */
  if(S.mode!=='play')return;
@@ -123,14 +125,14 @@ function autoFinish(){ /* 남은 당첨이 전부 100% 확정이면 자동으로
   if(sure.length!==k)return; /* 100% 칸 수 = 남은 당첨 수 일 때만 */
   addObs(sure[0],'f')}}
 
-function hint(){S.sel=null;S.rec=null;S.fb=false;S.sure=false;S.imp=null;S.ex=null;S.prog=null;S.busy=true;setTimeout(()=>{
+function hint(){S.sel=null;S.rec=null;S.fb=false;S.sure=false;S.imp=null;S.ex=null;S.prog=null;S.stopped=false;S.busy=true;setTimeout(()=>{
  let wait=false;
  try{autoFinish();S.rec=openRec();if(S.rec==null)S.rec=deepRec();
   if(found().length>=3){if(!cands().length)S.imp={k:'fin3',cells:visH()}}
   else if(S.rec<0&&!cands().length){S.imp=impossible();const f=S.imp?null:fallback();if(f){S.rec=f.i;S.fb=true;S.fbp=f.p;S.sure=!!f.sure}}
   else if(XM&&S.rec>=0&&clicks()>=EX_FROM){wait=true;
-   exRecPar((a,b,ms)=>{S.prog={a,b,ms};const t=L[S.lang];msg.innerHTML=t.calc+progHtml(t)})
-    .then(r=>{if(r>=0){S.rec=r;S.ex='ok'}else if(r==-2)S.ex='fb';else if(r==-3)S.ex='big'})
+   exRecPar((a,b,ms)=>{S.prog={a,b,ms};const t=L[S.lang],e=document.getElementById('xpn');if(e)e.innerHTML=progText(t);else msg.innerHTML=t.calc+progHtml(t)}) /* 진행 문구만 갱신해서 중단 버튼이 매번 새로 그려지지 않게 함 */
+    .then(r=>{if(r>=0){S.rec=r;S.ex='ok'}else if(r==-2)S.ex='fb';else if(r==-3)S.ex='big';else if(r==-4)S.stopped=true;else if(r==-5)S.stopped='auto'})
     .catch(e=>console.error(e)).then(()=>{S.prog=null;S.busy=false;render()})}}
  catch(e){console.error(e);S.rec=-1}
  if(!wait){S.busy=false;render();track()}},40)}
@@ -151,10 +153,11 @@ function act(a){
   S.rec=null;S.sel=null;S.imp=null;S.ex=null;
   if(again)go()} /* 되돌린 뒤 ! 질문이 남아 있으면 go()가 훈수를 건너뛰고 질문을 먼저 보여줌 */
  else if(a=='reset'){const l=S.lang;init();S.lang=l}
+ else if(a=='stop')exStop(); /* 완전탐색 중단 */
  else if(a=='cancel')S.sel=null;
  else if(a.startsWith('Q:')){answer(a=='Q:h');go()}
  else if('bhf'.includes(a)&&S.sel!=null){addObs(S.sel,a);S.sel=null;S.rec=null;go()}}
-document.onclick=e=>{if(S.busy)return;const el=e.target.closest('[data-a],[data-i]');if(!el)return;
+document.onclick=e=>{const el=e.target.closest('[data-a],[data-i]');if(!el)return;if(S.busy&&el.dataset.a!=='stop')return; /* 계산 중에는 중단 버튼만 누를 수 있음 */
  if(el.id=='ov'&&e.target!==el)return; /* 오버레이 안쪽(입력창·빈 공간) 클릭은 닫지 않음, 어두운 배경만 닫기 */
  if(el.dataset.i!==undefined){const n=S.obs.length;tap(+el.dataset.i);if(S.mode=='play'&&S.obs.length!=n)go()}else act(el.dataset.a);render();track()};
 document.addEventListener('input',e=>{if(e.target.id=='lq'){S.q=e.target.value;S.pg=0;fillLg()}});
