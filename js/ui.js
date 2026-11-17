@@ -49,6 +49,12 @@ function fillLg(){
  document.getElementById('lgb').innerHTML=a.length?a.slice(S.pg*LPG,S.pg*LPG+LPG).map(k=>`<button data-a="L:${k}"${k==S.lang?' class="p"':''}>${L[k].lang}</button>`).join(''):'<div class="lgh" style="grid-column:1/-1">No match</div>';
  document.getElementById('lpi').textContent=(S.pg+1)+' / '+P}
 
+/* 확률 → 표시 숫자: 진짜 확정일 때만 0·100, 나머지는 1~99로 표시 */
+function pct(p){
+ if(p>=.999999)return 100;
+ if(p<=0)return 0;
+ return Math.min(99,Math.max(1,Math.round(p*100)))}
+
 function render(){
  const t=L[S.lang],play=S.mode=='play',A=play?analyze():null,PQ=play?pend():[];
  document.documentElement.lang=S.lang;
@@ -61,7 +67,7 @@ function render(){
   else if(s=='o'){fill='#241f14';op=1}
   else if(s=='h'){fill='#241f14';op=1;tx='!';tc='#ffb300'}
   else if(s=='f'){fill='#ffb300';op=1;tx='★';tc='#1a1300'}
-  else if(A&&A.N){op=.18+.82*A.p[i]/pm;tx=Math.round(A.p[i]*100)}
+  else if(A&&A.N){op=.18+.82*A.p[i]/pm;tx=pct(A.p[i])}
   const pts=[[0,-sw],[w,-sw/2],[w,sw/2],[0,sw],[-w,sw/2],[-w,-sw/2]].map(p=>(cx+p[0]).toFixed(1)+','+(cy+p[1]).toFixed(1)).join(' ');
   g+=`<polygon data-i="${i}" class="${S.rec===i?'rec':''}" points="${pts}" fill="${fill}" fill-opacity="${op}"${S.sel===i||PQ[0]===i?' style="stroke:#fff;stroke-width:3.5"':CF.includes(i)?' style="stroke:#ef4444;stroke-width:3.5"':''}/>`;
   if(tx!=='')g+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${s=='c'?9:14}" font-weight="700" fill="${tc}" pointer-events="none">${tx}</text>`});
@@ -76,7 +82,7 @@ function render(){
  else if(S.sel!=null){const q=C[S.sel];
   m=`<b>${LB(t,S.sel)}</b> — ?<div class="row eq"><button data-a="b">${t.b}</button><button data-a="h">${t.h}</button><button class="p" data-a="f">${t.f}</button><button data-a="cancel">✕</button></div>`}
  else if(A.N==0&&!S.fb)m=LBRK(t.bad)+(CF.length?`<div class="nt2">${t.badc||L.en.badc}: ${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'')+nt;
- else if(S.rec!=null&&S.rec>=0){const q=C[S.rec];m=F(t.rec,{c:LB(t,S.rec),p:S.fb?Math.round(S.fbp*100):Math.round(A.p[S.rec]*100)})+(S.fb&&!S.sure?`<div class="nt">${t.fbn||L.en.fbn}${CF.length?': '+CF.map(i=>LB(t,i)).join(' · '):''}</div>`:'')+exNote(t)+oops(t)+nt+(nt?'':`<div class="nt2">${LBRK(t.tip1.replace(/^[^.。।]*[.。।։።།។။۔]\s*/,''))}</div>`)}
+ else if(S.rec!=null&&S.rec>=0){const q=C[S.rec];m=F(t.rec,{c:LB(t,S.rec),p:S.fb?pct(S.fbp):pct(A.p[S.rec])})+(S.fb&&!S.sure?`<div class="nt">${t.fbn||L.en.fbn}${CF.length?': '+CF.map(i=>LB(t,i)).join(' · '):''}</div>`:'')+exNote(t)+oops(t)+nt+(nt?'':`<div class="nt2">${LBRK(t.tip1.replace(/^[^.。।]*[.。।։።།។။۔]\s*/,''))}</div>`)}
  else m=LBRK(t.tip1)+nt;
  msg.innerHTML=m;msg.dir=cn.dir=LRTL.includes(S.lang)?'rtl':'ltr';
  cn.textContent=play?F(t.n,{a:S.obs.filter(o=>'bhf'.includes(o.k)&&!o.manual).length-S.n0,b:found().length}):'';
