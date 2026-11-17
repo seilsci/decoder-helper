@@ -115,6 +115,7 @@ function deepRec(){
 
 const XM=(()=>{try{return /[?&]x=6(&|$)/.test(location.search)}catch(e){return false}})();
 const EX_FROM=0;        /* 클릭 횟수 조건 없음 */
+let EX_FIRST_MS=5000;   /* 완전탐색에서 첫 칸(0/N → 1/N) 계산이 이 시간(ms) 안에 안 끝나면 자동 중단 (0이면 사용 안 함) */
 let EX_MAXN=30;         /* 후보가 이 개수 이하일 때만 완전탐색 (기본 30, 화면 입력칸에서 변경 가능) */
 const EX_BUD=Infinity;   /* 계산 호출 한도 없음 */
 const EX_MS=Infinity;   /* 계산 시간 한도 없음 (완전탐색은 x=6일 때만 실행됨) */
@@ -179,7 +180,7 @@ function exSeq(p){ /* 한 코어(메인 스레드)로 순서대로 탐색 — �
 function exRec(){const p=exPrep();return typeof p=='number'?p:exSeq(p)}
 
 /* ── 병렬 완전탐색: Web Worker 여러 개가 칸(첫 수 후보)을 하나씩 가져가 계산 ── */
-let exPool=null,exSid=0;
+let exPool=null,exSid=0,exAbort=null;
 function exWorkerSrc(){
  return 'const NB='+JSON.stringify(NB)+';const ADJ=new Uint8Array('+JSON.stringify(Array.from(ADJ))+');'
   +'let exCalls=0,exT0=0;const EX_BUD=Infinity,EX_MS=Infinity;const exMemo=new Map();let cur=-1;\n'
@@ -195,7 +196,9 @@ function exPoolGet(){
  const url=URL.createObjectURL(new Blob([exWorkerSrc()],{type:'text/javascript'}));
  const pool=[];for(let i=0;i<n;i++)pool.push(new Worker(url));
  exPool=pool;return pool}
-/* 반환: Promise — exRec()와 같은 값(칸 번호 / -1 / -3). 병렬을 못 쓰면 exSeq로 대체 */
+/* 계산 중단(중단 버튼): 돌고 있는 병렬 탐색이 있으면 워커를 끝내고 그 탐색은 -4를 돌려줌. 없으면 아무 일도 안 함 */
+function exStop(){if(exAbort)exAbort()}
+/* 반환: Promise — exRec()와 같은 값(칸 번호 / -1 / -3), 중단 버튼으로 중단하면 -4, 첫 칸이 EX_FIRST_MS 안에 안 끝나 자동 중단되면 -5. 병렬을 못 쓰면 exSeq로 대체 */
 function exRecPar(onProg){ /* onProg(끝낸 칸 수, 전체 칸 수, 경과 ms): 진행률 표시용(선택) */
  const p=exPrep();
  if(typeof p=='number')return Promise.resolve(p);
@@ -209,13 +212,16 @@ function exRecPar(onProg){ /* onProg(끝낸 칸 수, 전체 칸 수, 경과 ms):
  return new Promise(resolve=>{
   let next=0,done=0,lim=1e9,over=false;const res=[];
   const t0=Date.now(),prog=()=>{if(onProg)onProg(done,xs.length,Date.now()-t0)},tk=onProg?setInterval(prog,250):0; /* 끝나는 칸이 없어도 경과 시간은 계속 갱신 */
-  const fail=e=>{if(over)return;over=true;clearInterval(tk);console.error(e);exPool&&exPool.forEach(w=>w.terminate());exPool=null;resolve(exSeq(p))};
+  const fail=e=>{if(over)return;over=true;exAbort=null;clearTimeout(ft);clearInterval(tk);console.error(e);exPool&&exPool.forEach(w=>w.terminate());exPool=null;resolve(exSeq(p))};
   const fin=()=>{
-   if(over)return;over=true;clearInterval(tk);
+   if(over)return;over=true;exAbort=null;clearTimeout(ft);clearInterval(tk);
    res.sort((a,b)=>a.x==xa?-1:b.x==xa?1:a.x-b.x); /* xa 먼저, 나머지는 칸 번호 순 — 순차 탐색과 같은 동점 처리 */
    let bv=1e9,bx=-1;
    for(const m of res)if(bx<0||m.v<bv-1e-9){bv=m.v;bx=m.x}
    resolve(bx<0?-1:bx)};
+  const kill=c=>{if(over)return;over=true;exAbort=null;clearTimeout(ft);clearInterval(tk);exPool&&exPool.forEach(w=>w.terminate());exPool=null;resolve(c)}; /* 워커를 끝내고 c를 돌려줌 */
+  const ft=EX_FIRST_MS>0?setTimeout(()=>{if(done==0)kill(-5)},EX_FIRST_MS):0; /* 첫 칸도 못 끝내면 자동 중단: -5 */
+  exAbort=()=>kill(-4); /* 중단 버튼: -4 */
   const send=w=>{if(next>=xs.length)return;w.postMessage({sid,x:xs[next++],cf,F:fa,op:oa,H,k,lim})};
   pool.forEach(w=>{
    w.onmessage=e=>{const m=e.data;if(m.sid!==sid||over)return;
