@@ -30,6 +30,48 @@ function init(){S={lang:S?S.lang:load(),ov:false,q:'',pg:0,sh:[],mode:'setup',to
 init();
 function go(){if(!pend().length)hint()}
 
+/* ===== 이어하기(저장·복원): 칸별 상태와 누른 횟수만 저장하고, 퍼센트는 복원 뒤에 다시 계산 ===== */
+const SAVE_KEY='dh_game',SAVE_MS=12*3600*1000; /* 12시간이 지난 저장본은 무시 */
+function cntNow(){return S.obs.filter(o=>'bhf'.includes(o.k)&&!o.manual).length-S.n0+(S.cb||0)} /* 화면 하단의 누른 횟수 */
+function saveGame(){
+ try{
+  if(S.mode=='play'){
+   if(pend().length)return; /* ! 질문에 답하는 중에는 저장하지 않고 직전 저장본을 유지 */
+   if(found().length>=3){localStorage.removeItem(SAVE_KEY);return} /* 끝난 판은 이어하지 않음 */
+   const hv=new Set(S.obs.filter(o=>o.k=='h').map(o=>o.i)),bk=new Set(S.obs.filter(o=>o.k=='b').map(o=>o.i));
+   let s=''; /* x ✕ / f 당첨 / h 느낌표 / v 사라진 느낌표 / b 누른 빈칸 / o 그냥 열린 칸 / c 안 열린 칸 */
+   for(let i=0;i<42;i++){const st=state(i);
+    s+=st=='o'?(bk.has(i)?'b':hv.has(i)?'v':'o'):st=='h'?'h':st=='f'?'f':st=='x'?'x':'c'}
+   localStorage.setItem(SAVE_KEY,JSON.stringify({v:1,t:Date.now(),m:'play',s,c:cntNow()}))}
+  else if(S.xs.size||S.hs.size||S.bs.size||S.fs.size)
+   localStorage.setItem(SAVE_KEY,JSON.stringify({v:1,t:Date.now(),m:'setup',x:[...S.xs],h:[...S.hs],b:[...S.bs],f:[...S.fs]}));
+  else localStorage.removeItem(SAVE_KEY)
+ }catch(e){}}
+function restoreGame(){ /* 저장본이 있으면 S에 되살리고 true */
+ try{
+  const j=localStorage.getItem(SAVE_KEY);if(!j)return false;
+  const d=JSON.parse(j);
+  if(!d||d.v!==1||!(Date.now()-d.t<SAVE_MS))return false;
+  if(d.m=='setup'){
+   const ok=a=>Array.isArray(a)&&a.every(i=>Number.isInteger(i)&&i>=0&&i<42);
+   if(!ok(d.x)||!ok(d.h)||!ok(d.b)||!ok(d.f))return false;
+   S.xs=new Set(d.x);S.hs=new Set(d.h);S.bs=new Set(d.b);S.fs=new Set(d.f);return true}
+  if(d.m!=='play'||typeof d.s!=='string'||d.s.length!==42||!/^[xcbfhvo]+$/.test(d.s)||!Number.isFinite(d.c))return false;
+  const s=d.s,at=chs=>[...s].map((c,i)=>chs.includes(c)?i:-1).filter(i=>i>=0),F=at('f'),obs=[];
+  F.forEach(i=>obs.push({i,k:'f',F:[]}));
+  at('b').forEach(i=>obs.push({i,k:'b',F}));
+  at('h').forEach(i=>obs.push({i,k:'h',F}));
+  at('v').forEach(i=>{obs.push({i,k:'h',F:[]});obs.push({i,k:'r',h:false,F,ans:true,fo:null})}); /* 사라진 느낌표: 눌렀을 때 근처에 당첨이 있었고(F:[]), 지금은 남은 당첨이 근처에 없음 */
+  S.xs=new Set(at('x'));S.os=new Set(at('o'));
+  S.obs=obs;S.n0=obs.length; /* 복원 시점까지의 기록은 되돌리기 대상이 아님 */
+  S.cb=Math.round(d.c)+S.n0-obs.filter(o=>'bhf'.includes(o.k)&&!o.manual).length; /* 누른 횟수를 저장된 값에서 이어서 셈 */
+  S.hs=new Set(at('h'));S.fs=new Set(F);S.bs=new Set(at('bvo'));S.cl=at('c'); /* 처음 설정으로 되돌아가도 현재 판이 보이게 */
+  S.mode='play';S.t0=Date.now();
+  return true
+ }catch(e){return false}}
+/* ===== /이어하기 ===== */
+
+
 /* 언어 목록: 기본 순서(LG 묶음 순서 + 나머지). 검색어가 있으면 일치하는 언어를 맨 위로 */
 function langList(){
  const used=new Set(LG.flat()),base=LG.flat().concat(Object.keys(L).filter(k=>!used.has(k))).filter(k=>L[k]);
@@ -85,12 +127,13 @@ function render(){
  else if(S.rec!=null&&S.rec>=0){const q=C[S.rec];m=F(t.rec,{c:LB(t,S.rec),p:S.fb?pct(S.fbp):pct(A.p[S.rec])})+(S.fb&&!S.sure?`<div class="nt">${t.fbn||L.en.fbn}${CF.length?': '+CF.map(i=>LB(t,i)).join(' · '):''}</div>`:'')+exNote(t)+(S.stopped?`<div class="nt">${S.stopped=='auto'?'첫 칸 계산이 '+(EX_FIRST_MS/1000)+'초 안에 끝나지 않아 완전탐색을 자동으로 중단했습니다.':'완전탐색을 중단했습니다.'} 기본 추천을 보여드립니다.</div>`:'')+oops(t)+nt+(nt?'':`<div class="nt2">${LBRK(t.tip1.replace(/^[^.。।]*[.。।։።།។။۔]\s*/,''))}</div>`)}
  else m=LBRK(t.tip1)+nt;
  msg.innerHTML=m;msg.dir=cn.dir=LRTL.includes(S.lang)?'rtl':'ltr';
- cn.textContent=play?F(t.n,{a:S.obs.filter(o=>'bhf'.includes(o.k)&&!o.manual).length-S.n0,b:found().length}):'';
+ cn.textContent=play?F(t.n,{a:cntNow(),b:found().length}):'';
  tl.hidden=play;
  if(!play)tl.innerHTML=['x','h','b','f'].map(k=>`<button data-a="T:${k}"${S.tool==k?' class="p"':''}>${k=='x'?'✕':k=='h'?'!':k=='b'?'○ '+t.b:'★ '+t.f}</button>`).join('');
  ov.hidden=!S.ov;
  if(!S.ov)ov.innerHTML='';
  else{if(!ov.firstChild)buildLg();fillLg()}
+ saveGame();
 }
 
 function tap(i){
@@ -144,7 +187,7 @@ function act(a){
  else if(a.startsWith('L:')){S.lang=a.slice(2);S.ov=false;save()}
  else if(a=='hint'){
   if(S.mode=='play'&&pend().length)return;
-  if(S.mode=='setup'){S.cl=C.map((_,i)=>i).filter(i=>state(i)=='c');const F0=[...S.fs];S.os=new Set(S.bs);S.obs=F0.map(i=>({i,k:'f',F:[]})).concat([...S.hs].map(i=>({i,k:'h',F:F0})));S.n0=S.obs.length;S.mode='play';S.t0=Date.now()}
+  if(S.mode=='setup'){S.cl=C.map((_,i)=>i).filter(i=>state(i)=='c');const F0=[...S.fs];S.os=new Set(S.bs);S.obs=F0.map(i=>({i,k:'f',F:[]})).concat([...S.hs].map(i=>({i,k:'h',F:F0})));S.n0=S.obs.length;S.cb=0;S.mode='play';S.t0=Date.now()}
   hint()}
  else if(a=='undo'){
   let again=false; /* 첫 설정 이후(훈수 모드)에서 한 수를 되돌린 경우에만 훈수를 자동으로 다시 계산 */
@@ -161,4 +204,4 @@ document.onclick=e=>{const el=e.target.closest('[data-a],[data-i]');if(!el)retur
  if(el.id=='ov'&&e.target!==el)return; /* 오버레이 안쪽(입력창·빈 공간) 클릭은 닫지 않음, 어두운 배경만 닫기 */
  if(el.dataset.i!==undefined){const n=S.obs.length;tap(+el.dataset.i);if(S.mode=='play'&&S.obs.length!=n)go()}else act(el.dataset.a);render();track()};
 document.addEventListener('input',e=>{if(e.target.id=='lq'){S.q=e.target.value;S.pg=0;fillLg()}});
-render();
+restoreGame();render();if(S.mode=='play')hint(); /* 저장된 판이 있으면 이어서 시작 */
