@@ -107,7 +107,9 @@ function tap(i){
   else if(s=='o'&&!S.obs.some(o=>o.i==i)){S.obs.push({i,k:'h',F:found(),manual:true});S.rec=null}
   else if(s=='h'&&S.obs.some(o=>o.i==i&&o.manual)){
    S.obs=S.obs.filter(o=>!(o.i==i&&(o.manual||o.k=='r'))&&!(o.k=='t'&&o.r&&o.r.i==i));S.rec=null}
-  else if(s=='c')S.sel=i}}
+  else if(s=='c'){
+   if(sure100(i)){addObs(i,'f');S.rec=null} /* 100% 확정 칸은 묻지 않고 바로 당첨 처리 */
+   else S.sel=i}}}
 function progHtml(t){return S.prog?`<div class="nt">${F(t.exprog||L.ko.exprog,{a:S.prog.a,b:S.prog.b,c:(S.prog.ms/1000).toFixed(1)})}</div>`:''}
 
 function autoFinish(){ /* 남은 당첨이 전부 100% 확정이면 자동으로 당첨 처리하고 완료(클릭 수에도 반영) */
