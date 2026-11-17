@@ -23,7 +23,7 @@ function addObs(i,k){
  S.obs.push(o);
  if(k=='f'){
   o.q=[...new Set(S.obs.filter(h=>h.k=='h'&&NB[h.i].includes(i)&&state(h.i)=='h').map(h=>h.i))];
-  if(found().length>=3)o.q.forEach(c=>S.obs.push({i:c,k:'r',h:false,F:found(),ans:true,fo:o}));
+  if(found().length>=3)o.q.forEach(c=>S.obs.push({i:c,k:'r',h:false,F:found(),ans:true,auto:true,fo:o}));
   else if(o.q.length){/* 남은 후보 전부에서 ! 유지 여부가 같으면 질문 생략: 주변에 아직 안 열린 칸이 없어 ! 가 사라질 수밖에 없는 경우 등. 후보마다 갈리는 ! 만 질문 */
    const cf=cands(),F=found();
    if(cf.length)o.q.forEach(c=>{
