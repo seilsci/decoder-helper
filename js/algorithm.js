@@ -4,7 +4,7 @@ R.forEach((n,r)=>{for(let c=0;c<n;c++)C.push({r,c,x:r%2?c:c+.5})});
 const NB=C.map((a,i)=>C.map((b,j)=>j).filter(j=>{const b=C[j],dr=Math.abs(a.r-b.r),dx=Math.abs(a.x-b.x);return j!=i&&((dr==0&&dx==1)||(dr==1&&dx==.5))}));
 const T=[];for(let a=0;a<42;a++)for(let b=a+1;b<42;b++)for(let c=b+1;c<42;c++)T.push([a,b,c]);
 const found=()=>S.obs.filter(o=>o.k=='f').map(o=>o.i);
-const clicks=()=>S.obs.filter(o=>'bhf'.includes(o.k)&&!o.manual).length-S.n0+(S.cb||0);
+const clicks=()=>S.obs.filter(o=>'bhf'.includes(o.k)&&!o.manual).length-S.n0;
 function opened(){const s=new Set([...S.xs,...S.os]);S.obs.forEach(o=>{s.add(o.i);if(o.k=='b')NB[o.i].forEach(j=>s.add(j))});return s}
 function ok(t,o){const hit=t.includes(o.i);if(o.k=='f')return hit;if(hit)return false;
  const near=NB[o.i].some(j=>t.includes(j)&&!o.F.includes(j));return(o.k=='h'||o.h)?near:!near}
@@ -66,8 +66,6 @@ function outcome(i){
   const s=t.includes(i)?'f':t.some(j=>!F.includes(j)&&NB[i].includes(j))?'h':'b';
   if(r===null)r=s;else if(r!==s)return null}
  return r}
-/* 이 칸이 남은 후보 전부에서 당첨인가(100% 확정)? 후보가 하나도 없으면 false */
-function sure100(i){return outcome(i)=='f'}
 /* 이 칸이 남은 후보 어디에서도 당첨이 아닌가(0% 확정)? 후보가 하나도 없으면 false */
 function never(i){const cf=cands();return cf.length>0&&!cf.some(t=>t.includes(i))}
 
@@ -152,7 +150,7 @@ function exVal(x,cf,F,op,H,k,lim){
  let v=1;
  for(const[s,g]of m){const[F2,op2,H2]=exNext(s,x,F,op,H);v+=g.length/cf.length*exV(g,F2,op2,H2,s[0]=='f'?k-1:k);if(v>=lim)return v}
  return v}
-/* 반환: 칸 번호(0~41) / -1 해당 없음 / -2 시간·계산량 초과 / -3 후보가 너무 많음 */
+/* 완전탐색 결과 코드: 칸 번호(0~41) / -1 해당 없음 / -2 시간·계산량 초과(지금은 한도가 없어 안 나옴) / -3 후보가 너무 많음 / -4 중단 버튼 / -5 첫 칸 자동 중단 */
 function exPrep(){ /* 완전탐색 준비: 숫자(-1/-3/칸 번호)면 그대로 결과, 객체면 탐색 입력 */
  const cf=cands(),N=cf.length,k=3-found().length;
  if(!XM||S.lang!=='ko')return -1; /* x=6 이고 한국어일 때만 완전탐색 */
@@ -177,7 +175,6 @@ function exSeq(p){ /* 한 코어(메인 스레드)로 순서대로 탐색 — �
   return bx
  }catch(e){if(e.message!=='budget')throw e;return -2}
  finally{exMemo.clear()}}
-function exRec(){const p=exPrep();return typeof p=='number'?p:exSeq(p)}
 
 /* ── 병렬 완전탐색: Web Worker 여러 개가 칸(첫 수 후보)을 하나씩 가져가 계산 ── */
 let exPool=null,exSid=0,exAbort=null;
@@ -198,7 +195,7 @@ function exPoolGet(){
  exPool=pool;return pool}
 /* 계산 중단(중단 버튼): 돌고 있는 병렬 탐색이 있으면 워커를 끝내고 그 탐색은 -4를 돌려줌. 없으면 아무 일도 안 함 */
 function exStop(){if(exAbort)exAbort()}
-/* 반환: Promise — exRec()와 같은 값(칸 번호 / -1 / -3), 중단 버튼으로 중단하면 -4, 첫 칸이 EX_FIRST_MS 안에 안 끝나 자동 중단되면 -5. 병렬을 못 쓰면 exSeq로 대체 */
+/* 반환: Promise — 위 결과 코드 중 하나(칸 번호 / -1 / -3 / -4 중단 버튼 / -5 첫 칸이 EX_FIRST_MS 안에 안 끝나 자동 중단). 병렬을 못 쓰면 exSeq로 대체 */
 function exRecPar(onProg){ /* onProg(끝낸 칸 수, 전체 칸 수, 경과 ms): 진행률 표시용(선택) */
  const p=exPrep();
  if(typeof p=='number')return Promise.resolve(p);
@@ -242,10 +239,6 @@ function state(i){
  if(o){if(o.k=='f')return'f';if(o.k=='h'){let r=null;eff().forEach(x=>{if(x.k=='r'&&x.i==i)r=x});return r&&!r.h?'o':'h'}return'o'}
  return S.os.has(i)||S.obs.some(o=>o.k=='b'&&NB[o.i].includes(i))?'o':'c'}
 
-function vanN(){
- return S.obs.filter(o=>o.k=='h'&&state(o.i)=='o'&&lastR(o.i)).length}
-function lastReal(){
- let r=null;S.obs.forEach(o=>{if('bhf'.includes(o.k)&&!o.manual)r=o});return r}
 function visH(){return[...new Set(S.obs.filter(o=>o.k=='h'&&state(o.i)=='h').map(o=>o.i))]}
 function impossible(){
  const F=found(),E=eff().filter(o=>o.k=='h'||(o.k=='r'&&o.h));
