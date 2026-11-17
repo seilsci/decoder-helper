@@ -58,6 +58,9 @@ function sureRec(cf){
   if(n>m){m=n;r=x}}
  return r}
 
+/* 이 칸이 남은 후보 전부에서 당첨인가(100% 확정)? 후보가 하나도 없으면 false */
+function sure100(i){const cf=cands();return cf.length>0&&cf.every(t=>t.includes(i))}
+
 function analyze(){
  const cf=cands(),N=cf.length,F=found(),op=opened();
  const ni=Array(42).fill(0),ex=Array(42).fill(0),bl=Array(42).fill(0);
