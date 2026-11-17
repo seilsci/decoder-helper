@@ -33,16 +33,18 @@ function go(){if(!pend().length)hint()}
 /* ===== 이어하기(저장·복원): 칸별 상태와 누른 횟수만 저장하고, 퍼센트는 복원 뒤에 다시 계산 ===== */
 const SAVE_KEY='dh_game',SAVE_MS=12*3600*1000; /* 12시간이 지난 저장본은 무시 */
 function cntNow(){return S.obs.filter(o=>'bhf'.includes(o.k)&&!o.manual).length-S.n0+(S.cb||0)} /* 화면 하단의 누른 횟수 */
+function packObs(){ /* 처음 설정 이후의 착수 기록 저장용: obs끼리의 참조(fo, r)는 번호로 바꿔서 저장 */
+ const ix=new Map(S.obs.map((o,k)=>[o,k]));
+ return S.obs.slice(S.n0).map(o=>{const p={...o};
+  if(o.fo)p.fo=ix.has(o.fo)?ix.get(o.fo):-1;
+  if(o.k=='t'&&o.r)p.r=ix.has(o.r)?ix.get(o.r):-1;
+  return p})}
 function saveGame(){
  try{
   if(S.mode=='play'){
-   if(pend().length)return; /* ! 질문에 답하는 중에는 저장하지 않고 직전 저장본을 유지 */
    if(found().length>=3){localStorage.removeItem(SAVE_KEY);return} /* 끝난 판은 이어하지 않음 */
-   const hv=new Set(S.obs.filter(o=>o.k=='h').map(o=>o.i)),bk=new Set(S.obs.filter(o=>o.k=='b').map(o=>o.i));
-   let s=''; /* x ✕ / f 당첨 / h 느낌표 / v 사라진 느낌표 / b 누른 빈칸 / o 그냥 열린 칸 / c 안 열린 칸 */
-   for(let i=0;i<42;i++){const st=state(i);
-    s+=st=='o'?(bk.has(i)?'b':hv.has(i)?'v':'o'):st=='h'?'h':st=='f'?'f':st=='x'?'x':'c'}
-   localStorage.setItem(SAVE_KEY,JSON.stringify({v:1,t:Date.now(),m:'play',s,c:cntNow()}))}
+   /* 처음 설정(x·!·○·★)과 그 뒤의 착수·답변 기록을 그대로 저장 → 복원하면 같은 순서로 다시 쌓여서 되돌리기도 가능 */
+   localStorage.setItem(SAVE_KEY,JSON.stringify({v:2,t:Date.now(),m:'play',x:[...S.xs],h:[...S.hs],b:[...S.bs],f:[...S.fs],o:packObs(),e:Date.now()-S.t0}))}
   else if(S.xs.size||S.hs.size||S.bs.size||S.fs.size)
    localStorage.setItem(SAVE_KEY,JSON.stringify({v:1,t:Date.now(),m:'setup',x:[...S.xs],h:[...S.hs],b:[...S.bs],f:[...S.fs]}));
   else localStorage.removeItem(SAVE_KEY)
@@ -51,22 +53,27 @@ function restoreGame(){ /* 저장본이 있으면 S에 되살리고 true */
  try{
   const j=localStorage.getItem(SAVE_KEY);if(!j)return false;
   const d=JSON.parse(j);
-  if(!d||d.v!==1||!(Date.now()-d.t<SAVE_MS))return false;
-  if(d.m=='setup'){
-   const ok=a=>Array.isArray(a)&&a.every(i=>Number.isInteger(i)&&i>=0&&i<42);
-   if(!ok(d.x)||!ok(d.h)||!ok(d.b)||!ok(d.f))return false;
+  if(!d||!(Date.now()-d.t<SAVE_MS))return false;
+  const ok=a=>Array.isArray(a)&&a.every(i=>Number.isInteger(i)&&i>=0&&i<42);
+  if(!ok(d.x)||!ok(d.h)||!ok(d.b)||!ok(d.f)||d.f.length>3)return false;
+  if(d.v===1&&d.m=='setup'){
    S.xs=new Set(d.x);S.hs=new Set(d.h);S.bs=new Set(d.b);S.fs=new Set(d.f);return true}
-  if(d.m!=='play'||typeof d.s!=='string'||d.s.length!==42||!/^[xcbfhvo]+$/.test(d.s)||!Number.isFinite(d.c))return false;
-  const s=d.s,at=chs=>[...s].map((c,i)=>chs.includes(c)?i:-1).filter(i=>i>=0),F=at('f'),obs=[];
-  F.forEach(i=>obs.push({i,k:'f',F:[]}));
-  at('b').forEach(i=>obs.push({i,k:'b',F}));
-  at('h').forEach(i=>obs.push({i,k:'h',F}));
-  at('v').forEach(i=>{obs.push({i,k:'h',F:[]});obs.push({i,k:'r',h:false,F,ans:true,fo:null})}); /* 사라진 느낌표: 눌렀을 때 근처에 당첨이 있었고(F:[]), 지금은 남은 당첨이 근처에 없음 */
-  S.xs=new Set(at('x'));S.os=new Set(at('o'));
-  S.obs=obs;S.n0=obs.length; /* 복원 시점까지의 기록은 되돌리기 대상이 아님 */
-  S.cb=Math.round(d.c)+S.n0-obs.filter(o=>'bhf'.includes(o.k)&&!o.manual).length; /* 누른 횟수를 저장된 값에서 이어서 셈 */
-  S.hs=new Set(at('h'));S.fs=new Set(F);S.bs=new Set(at('bvo'));S.cl=at('c'); /* 처음 설정으로 되돌아가도 현재 판이 보이게 */
-  S.mode='play';S.t0=Date.now();
+  if(d.v!==2||d.m!=='play'||!Array.isArray(d.o))return false;
+  const xs=new Set(d.x),hs=new Set(d.h),bs=new Set(d.b),fs=new Set(d.f);
+  const F0=[...fs],base=F0.map(i=>({i,k:'f',F:[]})).concat([...hs].map(i=>({i,k:'h',F:F0}))); /* 처음 설정에서 만들어지는 기록: 훈수 시작 때와 같은 방식 */
+  const all=base.concat(d.o.map(p=>({...p}))),n=all.length;
+  for(let k=base.length;k<n;k++){const o=all[k];
+   if(!o||typeof o.k!=='string'||o.k.length!==1||!'bhfrt'.includes(o.k)||!Number.isInteger(o.i)||o.i<0||o.i>=42)return false;
+   if(o.k=='t'){if(!Number.isInteger(o.r)||o.r<0||o.r>=n||all[o.r].k!=='r')return false}
+   else{if(!ok(o.F))return false;
+    if(o.fo!=null&&!(Number.isInteger(o.fo)&&o.fo>=0&&o.fo<n))return false;
+    if(o.q!==undefined&&!ok(o.q))return false}}
+  for(let k=base.length;k<n;k++){const o=all[k]; /* 번호로 저장해 둔 참조를 다시 객체로 연결 */
+   if(o.k=='t')o.r=all[o.r];else if(o.fo!=null)o.fo=all[o.fo]}
+  S.xs=xs;S.hs=hs;S.bs=bs;S.fs=fs;S.os=new Set(bs);
+  S.cl=C.map((_,i)=>i).filter(i=>!xs.has(i)&&!hs.has(i)&&!bs.has(i)&&!fs.has(i)); /* 처음 설정 때 안 열려 있던 칸 */
+  S.obs=all;S.n0=base.length;S.cb=0;S.mode='play';
+  S.t0=Date.now()-(Number.isFinite(d.e)&&d.e>0?d.e:0); /* 닫혀 있던 시간은 빼고, 플레이한 시간만 이어서 셈 */
   return true
  }catch(e){return false}}
 /* ===== /이어하기 ===== */
@@ -204,4 +211,4 @@ document.onclick=e=>{const el=e.target.closest('[data-a],[data-i]');if(!el)retur
  if(el.id=='ov'&&e.target!==el)return; /* 오버레이 안쪽(입력창·빈 공간) 클릭은 닫지 않음, 어두운 배경만 닫기 */
  if(el.dataset.i!==undefined){const n=S.obs.length;tap(+el.dataset.i);if(S.mode=='play'&&S.obs.length!=n)go()}else act(el.dataset.a);render();track()};
 document.addEventListener('input',e=>{if(e.target.id=='lq'){S.q=e.target.value;S.pg=0;fillLg()}});
-restoreGame();render();if(S.mode=='play')hint(); /* 저장된 판이 있으면 이어서 시작 */
+restoreGame();render();if(S.mode=='play')go(); /* 저장된 판이 있으면 이어서 시작 (! 질문이 남아 있으면 질문부터) */
