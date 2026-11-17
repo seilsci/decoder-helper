@@ -35,7 +35,7 @@
  }
  inp.addEventListener('change',function(){
   var v=parseInt(inp.value,10);
-  if(!(v>=1)){v=200}
+  if(!(v>=1)){v=30}
   inp.value=v;EX_MAXN=v;upd();
  });
  new MutationObserver(upd).observe(m,{childList:true,subtree:true,characterData:true});
