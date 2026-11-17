@@ -1,5 +1,5 @@
-/* 화면 / 입력 — 상태(S), 그리기(render), 탭·버튼 처리, 시작 코드. 마지막에 render()로 시작 */
-/* 언어 검색용 국가 코드: 언어코드 -> [ISO alpha-2, alpha-3, 숫자]. 언어 추가할 때 여기도 같이 추가 */
+/* 화면 / 입력 — 상태(S), 기록 전송(track), 이어하기(저장·복원), 언어 선택창, 그리기(render), 탭·버튼 처리. 맨 끝에서 저장된 판을 복원한 뒤 render()로 시작 */
+/* 언어 검색용 국가 코드: lang.js의 LC와 lang2.js의 LC2를 합쳐서 사용 (언어코드 -> [ISO alpha-2, alpha-3, 숫자]). 언어를 추가할 때는 lang.js / lang2.js 쪽에 넣음 */
 const LCODES=(typeof LC!=='undefined')?LC:{}; /* 국가 코드는 lang.js의 LC를 그대로 사용 */
 if(typeof LC2!=='undefined')for(const k in LC2)LCODES[k]=[...new Set((LCODES[k]||[]).concat(LC2[k]))]; /* lang2.js가 이미 이어 붙였어도 중복 없이 */
 const LRTL=['ar','he','fa','prs','ps','ug','yi','ckb','sd','ur','dv']; /* 오른쪽→왼쪽 언어: 안내 메시지·하단 카운트 방향 */
@@ -30,9 +30,8 @@ function init(){S={lang:S?S.lang:load(),ov:false,q:'',pg:0,sh:[],mode:'setup',to
 init();
 function go(){if(!pend().length)hint()}
 
-/* ===== 이어하기(저장·복원): 칸별 상태와 누른 횟수만 저장하고, 퍼센트는 복원 뒤에 다시 계산 ===== */
+/* ===== 이어하기(저장·복원): 처음 설정(x·!·○·★)과 그 뒤의 착수·답변 기록을 저장하고, 복원하면 같은 순서로 다시 쌓음. 퍼센트는 복원 뒤에 다시 계산 ===== */
 const SAVE_KEY='dh_game',SAVE_MS=12*3600*1000; /* 12시간이 지난 저장본은 무시 */
-function cntNow(){return S.obs.filter(o=>'bhf'.includes(o.k)&&!o.manual).length-S.n0+(S.cb||0)} /* 화면 하단의 누른 횟수 */
 function packObs(){ /* 처음 설정 이후의 착수 기록 저장용: obs끼리의 참조(fo, r)는 번호로 바꿔서 저장 */
  const ix=new Map(S.obs.map((o,k)=>[o,k]));
  return S.obs.slice(S.n0).map(o=>{const p={...o};
@@ -72,7 +71,7 @@ function restoreGame(){ /* 저장본이 있으면 S에 되살리고 true */
    if(o.k=='t')o.r=all[o.r];else if(o.fo!=null)o.fo=all[o.fo]}
   S.xs=xs;S.hs=hs;S.bs=bs;S.fs=fs;S.os=new Set(bs);
   S.cl=C.map((_,i)=>i).filter(i=>!xs.has(i)&&!hs.has(i)&&!bs.has(i)&&!fs.has(i)); /* 처음 설정 때 안 열려 있던 칸 */
-  S.obs=all;S.n0=base.length;S.cb=0;S.mode='play';
+  S.obs=all;S.n0=base.length;S.mode='play';
   S.t0=Date.now()-(Number.isFinite(d.e)&&d.e>0?d.e:0); /* 닫혀 있던 시간은 빼고, 플레이한 시간만 이어서 셈 */
   return true
  }catch(e){return false}}
@@ -128,13 +127,13 @@ function render(){
  else if(PQ.length)m=`<b>${LB(t,PQ[0])}</b> — ${t.qn||L.en.qn}<div class="row eq"><button data-a="Q:b">${t.b}</button><button class="p" data-a="Q:h">${t.h}</button></div>`+oops(t);
  else if(S.imp)m=F(t[{many:'need4',noplace:'nopl',fin3:'fin3'}[S.imp.k]]||L.en[{many:'need4',noplace:'nopl',fin3:'fin3'}[S.imp.k]],{n:S.imp.n})+(CF.length?`<div class="nt2">${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'');
  else if(found().length==3)m=t.done+oops(t);
- else if(S.sel!=null){const q=C[S.sel];
+ else if(S.sel!=null){
   m=`<b>${LB(t,S.sel)}</b> — ?<div class="row eq"><button data-a="b">${t.b}</button><button data-a="h">${t.h}</button>${never(S.sel)?'':`<button class="p" data-a="f">${t.f}</button>`}<button data-a="cancel">✕</button></div>`}
  else if(A.N==0&&!S.fb)m=LBRK(t.bad)+(CF.length?`<div class="nt2">${t.badc||L.en.badc}: ${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'')+nt;
- else if(S.rec!=null&&S.rec>=0){const q=C[S.rec];m=F(t.rec,{c:LB(t,S.rec),p:S.fb?pct(S.fbp):pct(A.p[S.rec])})+(S.fb&&!S.sure?`<div class="nt">${t.fbn||L.en.fbn}${CF.length?': '+CF.map(i=>LB(t,i)).join(' · '):''}</div>`:'')+exNote(t)+(S.stopped?`<div class="nt">${S.stopped=='auto'?'첫 칸 계산이 '+(EX_FIRST_MS/1000)+'초 안에 끝나지 않아 완전탐색을 자동으로 중단했습니다.':'완전탐색을 중단했습니다.'} 기본 추천을 보여드립니다.</div>`:'')+oops(t)+nt+(nt?'':`<div class="nt2">${LBRK(t.tip1.replace(/^[^.。।։።།។။۔]*[.。।։።།។။۔]\s*/,''))}</div>`)}
+ else if(S.rec!=null&&S.rec>=0){m=F(t.rec,{c:LB(t,S.rec),p:S.fb?pct(S.fbp):pct(A.p[S.rec])})+(S.fb&&!S.sure?`<div class="nt">${t.fbn||L.en.fbn}${CF.length?': '+CF.map(i=>LB(t,i)).join(' · '):''}</div>`:'')+exNote(t)+(S.stopped?`<div class="nt">${S.stopped=='auto'?'첫 칸 계산이 '+(EX_FIRST_MS/1000)+'초 안에 끝나지 않아 완전탐색을 자동으로 중단했습니다.':'완전탐색을 중단했습니다.'} 기본 추천을 보여드립니다.</div>`:'')+oops(t)+nt+(nt?'':`<div class="nt2">${LBRK(t.tip1.replace(/^[^.。।։።།។။۔]*[.。।։።།។။۔]\s*/,''))}</div>`)}
  else m=LBRK(t.tip1)+nt;
  msg.innerHTML=m;msg.dir=cn.dir=LRTL.includes(S.lang)?'rtl':'ltr';
- cn.textContent=play?F(t.n,{a:cntNow(),b:found().length}):'';
+ cn.textContent=play?F(t.n,{a:clicks(),b:found().length}):'';
  tl.hidden=play;
  if(!play)tl.innerHTML=['x','h','b','f'].map(k=>`<button data-a="T:${k}"${S.tool==k?' class="p"':''}>${k=='x'?'✕':k=='h'?'!':k=='b'?'○ '+t.b:'★ '+t.f}</button>`).join('');
  ov.hidden=!S.ov;
@@ -194,7 +193,7 @@ function act(a){
  else if(a.startsWith('L:')){S.lang=a.slice(2);S.ov=false;save()}
  else if(a=='hint'){
   if(S.mode=='play'&&pend().length)return;
-  if(S.mode=='setup'){S.cl=C.map((_,i)=>i).filter(i=>state(i)=='c');const F0=[...S.fs];S.os=new Set(S.bs);S.obs=F0.map(i=>({i,k:'f',F:[]})).concat([...S.hs].map(i=>({i,k:'h',F:F0})));S.n0=S.obs.length;S.cb=0;S.mode='play';S.t0=Date.now()}
+  if(S.mode=='setup'){S.cl=C.map((_,i)=>i).filter(i=>state(i)=='c');const F0=[...S.fs];S.os=new Set(S.bs);S.obs=F0.map(i=>({i,k:'f',F:[]})).concat([...S.hs].map(i=>({i,k:'h',F:F0})));S.n0=S.obs.length;S.mode='play';S.t0=Date.now()}
   hint()}
  else if(a=='undo'){
   let again=false; /* 첫 설정 이후(훈수 모드)에서 한 수를 되돌린 경우에만 훈수를 자동으로 다시 계산 */
