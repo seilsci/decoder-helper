@@ -31,7 +31,7 @@ init();
 function go(){if(!pend().length)hint()}
 
 /* ===== 이어하기(저장·복원): 처음 설정(x·!·○·★)과 그 뒤의 착수·답변 기록을 저장하고, 복원하면 같은 순서로 다시 쌓음. 퍼센트는 복원 뒤에 다시 계산 ===== */
-const SAVE_KEY='dh_game',SAVE_MS=12*3600*1000; /* 12시간이 지난 저장본은 무시 */
+const SAVE_KEY='dh_game'; /* 저장 기한 없음: 끝난 판·처음부터 누른 판은 저장본이 자동으로 지워짐 */
 function packObs(){ /* 처음 설정 이후의 착수 기록 저장용: obs끼리의 참조(fo, r)는 번호로 바꿔서 저장 */
  const ix=new Map(S.obs.map((o,k)=>[o,k]));
  return S.obs.slice(S.n0).map(o=>{const p={...o};
@@ -52,7 +52,7 @@ function restoreGame(){ /* 저장본이 있으면 S에 되살리고 true */
  try{
   const j=localStorage.getItem(SAVE_KEY);if(!j)return false;
   const d=JSON.parse(j);
-  if(!d||!(Date.now()-d.t<SAVE_MS))return false;
+  if(!d)return false;
   const ok=a=>Array.isArray(a)&&a.every(i=>Number.isInteger(i)&&i>=0&&i<42);
   if(!ok(d.x)||!ok(d.h)||!ok(d.b)||!ok(d.f)||d.f.length>3)return false;
   if(d.v===1&&d.m=='setup'){
