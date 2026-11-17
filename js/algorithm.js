@@ -58,8 +58,18 @@ function sureRec(cf){
   if(n>m){m=n;r=x}}
  return r}
 
+/* 이 칸을 눌렀을 때의 결과가 남은 후보 전부에서 같으면 그 결과('f' 당첨 / 'h' 느낌표 / 'b' 빈칸), 갈리거나 후보가 없으면 null */
+function outcome(i){
+ const cf=cands();if(!cf.length)return null;
+ const F=found();let r=null;
+ for(const t of cf){
+  const s=t.includes(i)?'f':t.some(j=>!F.includes(j)&&NB[i].includes(j))?'h':'b';
+  if(r===null)r=s;else if(r!==s)return null}
+ return r}
 /* 이 칸이 남은 후보 전부에서 당첨인가(100% 확정)? 후보가 하나도 없으면 false */
-function sure100(i){const cf=cands();return cf.length>0&&cf.every(t=>t.includes(i))}
+function sure100(i){return outcome(i)=='f'}
+/* 이 칸이 남은 후보 어디에서도 당첨이 아닌가(0% 확정)? 후보가 하나도 없으면 false */
+function never(i){const cf=cands();return cf.length>0&&!cf.some(t=>t.includes(i))}
 
 function analyze(){
  const cf=cands(),N=cf.length,F=found(),op=opened();
