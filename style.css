@@ -16,11 +16,9 @@ polygon{stroke:#15120c;stroke-width:1.5;cursor:pointer}
 #msg .row{margin:8px 0 0}
 #msg .nt2{margin-top:8px}
 #msg .st{margin-top:10px;color:#ffcf66;font-weight:600}
-#msg .warn{margin-top:10px;color:#ff5a4d;font-weight:700}
 #msg .nt{margin-top:6px;color:#a39880;font-size:13px}
 small{color:#a39880}
 .lb{white-space:nowrap}
-.xb{display:block;font-size:12px;font-weight:700;color:#22d3ee;letter-spacing:.02em}
 @keyframes pu{50%{stroke-opacity:.25}}
 polygon.rec{stroke:#22d3ee;stroke-width:3.5;animation:pu 1.1s infinite}
 @media (prefers-reduced-motion:reduce){polygon.rec{animation:none}}
