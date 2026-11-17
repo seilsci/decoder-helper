@@ -80,7 +80,7 @@ function render(){
  else if(S.imp)m=F(t[{many:'need4',noplace:'nopl',fin3:'fin3'}[S.imp.k]]||L.en[{many:'need4',noplace:'nopl',fin3:'fin3'}[S.imp.k]],{n:S.imp.n})+(CF.length?`<div class="nt2">${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'');
  else if(found().length==3)m=t.done+oops(t);
  else if(S.sel!=null){const q=C[S.sel];
-  m=`<b>${LB(t,S.sel)}</b> — ?<div class="row eq"><button data-a="b">${t.b}</button><button data-a="h">${t.h}</button><button class="p" data-a="f">${t.f}</button><button data-a="cancel">✕</button></div>`}
+  m=`<b>${LB(t,S.sel)}</b> — ?<div class="row eq"><button data-a="b">${t.b}</button><button data-a="h">${t.h}</button>${never(S.sel)?'':`<button class="p" data-a="f">${t.f}</button>`}<button data-a="cancel">✕</button></div>`}
  else if(A.N==0&&!S.fb)m=LBRK(t.bad)+(CF.length?`<div class="nt2">${t.badc||L.en.badc}: ${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'')+nt;
  else if(S.rec!=null&&S.rec>=0){const q=C[S.rec];m=F(t.rec,{c:LB(t,S.rec),p:S.fb?pct(S.fbp):pct(A.p[S.rec])})+(S.fb&&!S.sure?`<div class="nt">${t.fbn||L.en.fbn}${CF.length?': '+CF.map(i=>LB(t,i)).join(' · '):''}</div>`:'')+exNote(t)+oops(t)+nt+(nt?'':`<div class="nt2">${LBRK(t.tip1.replace(/^[^.。।]*[.。।։።།។။۔]\s*/,''))}</div>`)}
  else m=LBRK(t.tip1)+nt;
@@ -108,7 +108,8 @@ function tap(i){
   else if(s=='h'&&S.obs.some(o=>o.i==i&&o.manual)){
    S.obs=S.obs.filter(o=>!(o.i==i&&(o.manual||o.k=='r'))&&!(o.k=='t'&&o.r&&o.r.i==i));S.rec=null}
   else if(s=='c'){
-   if(sure100(i)){addObs(i,'f');S.rec=null} /* 100% 확정 칸은 묻지 않고 바로 당첨 처리 */
+   const oc=outcome(i); /* 남은 후보 전부에서 결과가 같으면(당첨 100% / 느낌표 확정 / 빈칸 확정) 묻지 않고 바로 입력 */
+   if(oc){addObs(i,oc);S.rec=null}
    else S.sel=i}}}
 function progHtml(t){return S.prog?`<div class="nt">${F(t.exprog||L.ko.exprog,{a:S.prog.a,b:S.prog.b,c:(S.prog.ms/1000).toFixed(1)})}</div>`:''}
 
