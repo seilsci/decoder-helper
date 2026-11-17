@@ -145,9 +145,11 @@ function act(a){
   if(S.mode=='setup'){S.cl=C.map((_,i)=>i).filter(i=>state(i)=='c');const F0=[...S.fs];S.os=new Set(S.bs);S.obs=F0.map(i=>({i,k:'f',F:[]})).concat([...S.hs].map(i=>({i,k:'h',F:F0})));S.n0=S.obs.length;S.mode='play';S.t0=Date.now()}
   hint()}
  else if(a=='undo'){
-  if(S.mode=='play'){if(S.obs.length>S.n0)undoObs();else{S.obs=[];S.mode='setup'}}
+  let again=false; /* 첫 설정 이후(훈수 모드)에서 한 수를 되돌린 경우에만 훈수를 자동으로 다시 계산 */
+  if(S.mode=='play'){if(S.obs.length>S.n0){undoObs();again=true}else{S.obs=[];S.mode='setup'}}
   else if(S.sh.length){const p=S.sh.pop();S.xs=new Set(p[0]);S.hs=new Set(p[1]);S.bs=new Set(p[2]);S.fs=new Set(p[3])}
-  S.rec=null;S.sel=null;S.imp=null;S.ex=null}
+  S.rec=null;S.sel=null;S.imp=null;S.ex=null;
+  if(again)go()} /* 되돌린 뒤 ! 질문이 남아 있으면 go()가 훈수를 건너뛰고 질문을 먼저 보여줌 */
  else if(a=='reset'){const l=S.lang;init();S.lang=l}
  else if(a=='cancel')S.sel=null;
  else if(a.startsWith('Q:')){answer(a=='Q:h');go()}
