@@ -113,7 +113,7 @@ function deepRec(){
  found().forEach(i=>F[i]=1);opened().forEach(i=>op[i]=1);
  const k=3-found().length,N=cf.length;if(!N||!k)return -1;
  const s=sureRec(cf);if(s>=0)return s; /* 100% 칸 + 이웃 '!' → 먼저 추천 */
- if(typeof rollRec=='function')return rollRec(XM&&typeof PF!=='undefined'?PF:null); /* 롤아웃 추천(rollout.js). x=6 모드는 prior.js 가중치(PF)를 넣어 계산. rollout.js가 없을 때만 아래 기존 방식 */
+ if(typeof rollRec=='function')return rollRec(typeof PF!=='undefined'?PF:null); /* 롤아웃 추천(rollout.js), 일반·x=6 모두 prior.js 가중치(PF)를 넣어 계산. rollout.js가 없을 때만 아래 기존 방식 */
  return appChoice(cf,F,op,k)}
 
 const XM=(()=>{try{return /[?&]x=6(&|$)/.test(location.search)}catch(e){return false}})();

@@ -1,6 +1,6 @@
-/* prior.js — 당첨 칸 빈도(사전 확률)를 반영한 추천. x=6(XM)일 때만 작동하고, 아니면 기존 알고리즘 그대로.
+/* prior.js — 당첨 칸 빈도(사전 확률). PF는 일반·x=6 모드 모두 롤아웃 추천(rollout.js)과 시작 표(OPENX1~3)에 쓰임. 완전탐색·예비 휴리스틱(appChoice) 교체는 x=6(XM)일 때만.
    index.html에서 algorithm.js 바로 다음, ui.js 앞에 <script src="js/prior.js"></script> 한 줄 추가.
-   기존 파일은 수정하지 않고, 여기서 일부 함수를 덮어쓴다(XM이 아니면 원래 함수를 그대로 호출). */
+   기존 파일은 수정하지 않고, 여기서 일부 함수를 덮어쓴다(openRec은 두 모드 모두 OPENX 표, appChoice·완전탐색은 XM일 때만 교체). */
 
 /* 칸별 당첨 횟수 / 그 칸이 ✕가 아니었던 판 수 (칸 번호 0~41, 행 우선). 판이 쌓이면 이 두 배열만 갱신 (현재 244판) */
 const PRIOR_CNT=[23,14,19,9,9,15,19,20,17,16,16,11,9,10,20,23,19,20,28,18,8,9,7,30,27,14,34,31,12,10,12,36,26,15,16,18,15,13,11,10,28,15];
@@ -75,7 +75,7 @@ function prChoice(cf,F,op,k){
 (function(){
  const _appChoice=appChoice,_openRec=openRec;
  appChoice=function(cf,F,op,k){return XM?prChoice(cf,F,op,k):_appChoice(cf,F,op,k)}; /* deepRec·완전탐색의 기준 추천이 모두 이걸 거침 */
- openRec=function(){return XM?(typeof OPENX1!=='undefined'?_openRec(OPENX1,OPENX2,OPENX3):null):_openRec()}; /* x=6은 가중치로 계산한 전용 표(OPENX1~3, tables.js), 일반 모드는 균등 표(OPEN1~3) */
+ openRec=function(){return typeof OPENX1!=='undefined'?_openRec(OPENX1,OPENX2,OPENX3):(XM?null:_openRec())}; /* 일반·x=6 모두 가중치로 계산한 표(OPENX1~3, tables.js). 균등 표(OPEN1~3)는 prior.js가 없을 때만 */
 })();
 
 /* 완전탐색(x=6 전용)도 후보를 균등이 아니라 가중치로 평균: 기대 클릭 수를 가중 평균으로 계산. 워커에는 PF를 같이 넣어줌 */

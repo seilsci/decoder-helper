@@ -191,8 +191,8 @@ function hint(){S.sel=null;S.rec=null;S.fb=false;S.sure=false;S.imp=null;S.ex=nu
  let wait=false;
  try{autoFinish();S.rec=openRec();
   if(S.rec==null&&found().length<3&&cands().length&&sureRec()<0){wait=true;
-   /* 롤아웃 추천은 웹 워커에서 계산(화면이 멈추지 않게). x=6은 가중치(PF)를 넣어 계산한 뒤 후보가 적으면 완전탐색까지 */
-   rollRecAsync(XM&&typeof PF!=='undefined'?PF:null).then(r=>{S.rec=r}).catch(e=>{console.error(e);S.rec=deepRec()})
+   /* 롤아웃 추천은 웹 워커에서 계산(화면이 멈추지 않게). 일반·x=6 모두 가중치(PF)를 넣어 계산하고, x=6만 후보가 적으면 그 뒤 완전탐색 */
+   rollRecAsync(typeof PF!=='undefined'?PF:null).then(r=>{S.rec=r}).catch(e=>{console.error(e);S.rec=deepRec()})
     .then(()=>{let ex=false;try{ex=exRun()}catch(e){console.error(e)}if(!ex){S.busy=false;render();track()}})}
   else{if(S.rec==null)S.rec=deepRec();
   if(found().length>=3){if(!cands().length)S.imp={k:'fin3',cells:visH()}}
