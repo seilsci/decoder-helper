@@ -180,19 +180,25 @@ function autoFinish(){ /* 남은 당첨이 전부 100% 확정이면 자동으로
   if(sure.length!==k)return; /* 100% 칸 수 = 남은 당첨 수 일 때만 */
   addObs(sure[0],'f')}}
 
+/* 완전탐색(x=6 전용): 시작했으면 true. 끝나면 스스로 busy를 풀고 다시 그림 */
+function exRun(){
+ if(!(XM&&S.rec>=0&&clicks()>=EX_FROM))return false;
+ exRecPar((a,b,ms)=>{S.prog={a,b,ms};const t=L[S.lang],e=document.getElementById('xpn');if(e)e.innerHTML=progText(t);else msg.innerHTML=t.calc+progHtml(t)}) /* 진행 문구만 갱신해서 중단 버튼이 매번 새로 그려지지 않게 함 */
+  .then(r=>{if(r>=0){S.rec=r;S.ex='ok'}else if(r==-2)S.ex='fb';else if(r==-3)S.ex='big';else if(r==-4)S.stopped=true;else if(r==-5)S.stopped='auto'})
+  .catch(e=>console.error(e)).then(()=>{S.prog=null;S.busy=false;render()});
+ return true}
 function hint(){S.sel=null;S.rec=null;S.fb=false;S.sure=false;S.imp=null;S.ex=null;S.prog=null;S.stopped=false;S.busy=true;setTimeout(()=>{
  let wait=false;
  try{autoFinish();S.rec=openRec();
-  if(S.rec==null&&!XM&&found().length<3&&cands().length&&sureRec()<0){wait=true; /* 일반 모드 롤아웃 추천은 웹 워커에서 계산(화면이 멈추지 않게), 끝나면 그리기 */
-   rollRecAsync().then(r=>{S.rec=r}).catch(e=>{console.error(e);S.rec=deepRec()}).then(()=>{S.busy=false;render();track()})}
+  if(S.rec==null&&found().length<3&&cands().length&&sureRec()<0){wait=true;
+   /* 롤아웃 추천은 웹 워커에서 계산(화면이 멈추지 않게). x=6은 가중치(PF)를 넣어 계산한 뒤 후보가 적으면 완전탐색까지 */
+   rollRecAsync(XM&&typeof PF!=='undefined'?PF:null).then(r=>{S.rec=r}).catch(e=>{console.error(e);S.rec=deepRec()})
+    .then(()=>{let ex=false;try{ex=exRun()}catch(e){console.error(e)}if(!ex){S.busy=false;render();track()}})}
   else{if(S.rec==null)S.rec=deepRec();
   if(found().length>=3){if(!cands().length)S.imp={k:'fin3',cells:visH()}}
   else if(S.rec<0&&!cands().length){S.imp=impossible();const f=S.imp?null:fallback();if(f){S.rec=f.i;S.fb=true;S.fbp=f.p;S.sure=!!f.sure}}
-  else if(XM&&S.rec>=0&&clicks()>=EX_FROM){wait=true;
-   exRecPar((a,b,ms)=>{S.prog={a,b,ms};const t=L[S.lang],e=document.getElementById('xpn');if(e)e.innerHTML=progText(t);else msg.innerHTML=t.calc+progHtml(t)}) /* 진행 문구만 갱신해서 중단 버튼이 매번 새로 그려지지 않게 함 */
-    .then(r=>{if(r>=0){S.rec=r;S.ex='ok'}else if(r==-2)S.ex='fb';else if(r==-3)S.ex='big';else if(r==-4)S.stopped=true;else if(r==-5)S.stopped='auto'})
-    .catch(e=>console.error(e)).then(()=>{S.prog=null;S.busy=false;render()})}}}
- catch(e){console.error(e);S.rec=-1;wait=false} /* 완전탐색 시작 중 예외가 나면 대기 상태를 풀어서 "계산 중"에서 멈추지 않게 함 */
+  else if(exRun())wait=true}}
+ catch(e){console.error(e);S.rec=-1;wait=false} /* 계산 시작 중 예외가 나면 대기 상태를 풀어서 "계산 중"에서 멈추지 않게 함 */
  if(!wait){S.busy=false;render();track()}},40)}
 function act(a){
  if(a=='lang'){S.ov=true;S.q='';S.pg=0;ov.innerHTML=''}

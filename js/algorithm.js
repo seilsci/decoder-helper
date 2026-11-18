@@ -113,7 +113,7 @@ function deepRec(){
  found().forEach(i=>F[i]=1);opened().forEach(i=>op[i]=1);
  const k=3-found().length,N=cf.length;if(!N||!k)return -1;
  const s=sureRec(cf);if(s>=0)return s; /* 100% 칸 + 이웃 '!' → 먼저 추천 */
- if(!XM&&typeof rollRec=='function')return rollRec(); /* 일반 모드: 롤아웃 추천(rollout.js). x=6 모드는 아래 기존 방식(prior.js 가중치) */
+ if(typeof rollRec=='function')return rollRec(XM&&typeof PF!=='undefined'?PF:null); /* 롤아웃 추천(rollout.js). x=6 모드는 prior.js 가중치(PF)를 넣어 계산. rollout.js가 없을 때만 아래 기존 방식 */
  return appChoice(cf,F,op,k)}
 
 const XM=(()=>{try{return /[?&]x=6(&|$)/.test(location.search)}catch(e){return false}})();
@@ -270,15 +270,16 @@ function fallback(){
  if(!n)return null;
  let r=-1,m=0,pc=0;cnt.forEach((c,i)=>{const sc=c+((S.cl||[]).includes(i)?.5:0);if(sc>m){m=sc;r=i;pc=c}});
  return r<0?null:{i:r,p:pc/n}}
-function openRec(){
+function openRec(O1,O2,O3){ /* 시작 추천 표 찾기. 표를 안 넘기면 일반 모드 표(OPEN1~3), x=6 모드는 prior.js가 OPENX1~3을 넘김 */
+ O1=O1||OPEN1;O2=O2||OPEN2;O3=O3||OPEN3;
  if(S.xs.size!=2||S.os.size||S.n0)return null;
  const xk=[...S.xs].sort((a,b)=>a-b).join(',');
- if(!S.obs.length){const r=OPEN1[xk];return r===undefined?null:r}
- if(S.obs.length==1){const o=S.obs[0];if(o.manual||!'bhf'.includes(o.k))return null;const r=OPEN2[xk+'|'+o.i+'|'+o.k];return r===undefined?null:r}
+ if(!S.obs.length){const r=O1[xk];return r===undefined?null:r}
+ if(S.obs.length==1){const o=S.obs[0];if(o.manual||!'bhf'.includes(o.k))return null;const r=O2[xk+'|'+o.i+'|'+o.k];return r===undefined?null:r}
  if(S.obs.length==2||(S.obs.length==3&&S.obs[2].k=='r'&&S.obs[2].ans)){
   const o1=S.obs[0],o2=S.obs[1];
   if(o1.manual||o2.manual||!'bhf'.includes(o1.k)||!'bhf'.includes(o2.k))return null;
   let key=xk+'|'+o1.i+'|'+o1.k+'|'+o2.i+'|'+o2.k;
   if(S.obs.length==3)key+='|r'+(S.obs[2].h?1:0);
-  const r=OPEN3[key];return r===undefined?null:r}
+  const r=O3[key];return r===undefined?null:r}
  return null}

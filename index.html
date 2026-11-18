@@ -30,7 +30,7 @@
    inp.hidden=!on();
    if(!on()){d.textContent='';return}
    var N=cands().length,k=3-found().length;
-   var r=(typeof PF!=='undefined'?'가중치 적용('+(typeof PRIOR_SRC!=='undefined'?PRIOR_SRC:'')+') · ':'prior.js 없음 · ')+((N>=2&&k>=1&&N<=EX_MAXN)?'완전탐색':'휴리스틱');
+   var r=(typeof PF!=='undefined'?'가중치 적용('+(typeof PRIOR_SRC!=='undefined'?PRIOR_SRC:'')+') · ':'prior.js 없음 · ')+((N>=2&&k>=1&&N<=EX_MAXN)?'완전탐색':'롤아웃');
    d.textContent='[x=6 디버그] 후보 '+N+'개 · 남은 당첨 '+k+' · 상한 '+EX_MAXN+' · '+r
   }catch(e){d.textContent='[디버그 오류] '+e.message}
  }

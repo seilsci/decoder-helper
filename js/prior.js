@@ -75,7 +75,7 @@ function prChoice(cf,F,op,k){
 (function(){
  const _appChoice=appChoice,_openRec=openRec;
  appChoice=function(cf,F,op,k){return XM?prChoice(cf,F,op,k):_appChoice(cf,F,op,k)}; /* deepRec·완전탐색의 기준 추천이 모두 이걸 거침 */
- openRec=function(){return XM?null:_openRec()}; /* 시작 추천 표(OPEN1~3)는 균등 가정으로 만든 값이라 x=6에서는 건너뜀 */
+ openRec=function(){return XM?(typeof OPENX1!=='undefined'?_openRec(OPENX1,OPENX2,OPENX3):null):_openRec()}; /* x=6은 가중치로 계산한 전용 표(OPENX1~3, tables.js), 일반 모드는 균등 표(OPEN1~3) */
 })();
 
 /* 완전탐색(x=6 전용)도 후보를 균등이 아니라 가중치로 평균: 기대 클릭 수를 가중 평균으로 계산. 워커에는 PF를 같이 넣어줌 */
