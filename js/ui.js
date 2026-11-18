@@ -3,7 +3,7 @@
 const LCODES=(typeof LC!=='undefined')?LC:{}; /* 국가 코드는 lang.js의 LC를 그대로 사용 */
 if(typeof LC2!=='undefined')for(const k in LC2)LCODES[k]=[...new Set((LCODES[k]||[]).concat(LC2[k]))]; /* lang2.js가 이미 이어 붙였어도 중복 없이 */
 const LRTL=['ar','he','fa','prs','ps','ug','yi','ckb','sd','ur','dv']; /* 오른쪽→왼쪽 언어: 안내 메시지·하단 카운트 방향 */
-const LBRK=s=>s.replace(/([.。।։።།។။۔])\s*(?=\S)/g,'$1<br>'); /* 문장 끝 부호: . 。 । ։ ። ། ។ ။ ۔ */
+const LBRK=s=>s.replace(/([。།។။])\s*(?=\S)|([.।։።۔])\s+(?=\S)/g,(m,a,b)=>(a||b)+'<br>'); /* 문장 끝 부호: . 。 । ։ ። ། ។ ။ ۔  (공백 없이 이어지는 3.5 같은 숫자는 끊지 않도록 . । ։ ። ۔ 는 뒤에 공백이 있을 때만) */
 const LPG=18; /* 한 페이지 개수: 기존 언어 18개가 1페이지, 추가 언어는 2페이지부터 */
 
 const REC_URL='https://script.google.com/macros/s/AKfycbw_6H2IjYti4RM224PFnpQDknAGaF9g0Rjkel9GvOr---5WEJZzPMIOpIhhqGJShp1QqA/exec';
@@ -23,7 +23,11 @@ function track(){
 }
  
 
-function load(){try{const v=localStorage.getItem('dh_lang');if(v&&L[v])return v}catch(e){}return'ko'}
+function load(){
+ try{const v=localStorage.getItem('dh_lang');if(v&&L[v])return v}catch(e){}
+ const nl=String((navigator.languages&&navigator.languages[0])||navigator.language||'').toLowerCase(); /* 저장된 언어가 없으면 브라우저 언어로 시작: 전체 태그(zh-tw) → 앞부분(zh) 순서로 찾고, 없으면 영어 */
+ for(const k of [nl,nl.split('-')[0]])if(k&&L[k])return k;
+ return L.en?'en':'ko'}
 function save(){try{localStorage.setItem('dh_lang',S.lang)}catch(e){}}
 let S;
 function init(){S={lang:S?S.lang:load(),ov:false,q:'',pg:0,sh:[],mode:'setup',tool:'x',xs:new Set(),hs:new Set(),bs:new Set(),os:new Set(),fs:new Set(),obs:[],n0:0,rec:null,sel:null,ex:null,t0:0,sent:''}}
@@ -32,6 +36,7 @@ function go(){if(!pend().length)hint()}
 
 /* ===== 이어하기(저장·복원): 처음 설정(x·!·○·★)과 그 뒤의 착수·답변 기록을 저장하고, 복원하면 같은 순서로 다시 쌓음. 퍼센트는 복원 뒤에 다시 계산 ===== */
 const SAVE_KEY='dh_game'; /* 저장 기한 없음: 끝난 판·처음부터 누른 판은 저장본이 자동으로 지워짐 */
+const SAVE_V=2; /* 판 중간 저장 형식 버전: obs 구조를 바꾸는 수정을 하면 이 숫자를 올릴 것 (옛 저장본은 복원하지 않고 버려짐) */
 function packObs(){ /* 처음 설정 이후의 착수 기록 저장용: obs끼리의 참조(fo, r)는 번호로 바꿔서 저장 */
  const ix=new Map(S.obs.map((o,k)=>[o,k]));
  return S.obs.slice(S.n0).map(o=>{const p={...o};
@@ -43,7 +48,7 @@ function saveGame(){
   if(S.mode=='play'){
    if(found().length>=3){localStorage.removeItem(SAVE_KEY);return} /* 끝난 판은 이어하지 않음 */
    /* 처음 설정(x·!·○·★)과 그 뒤의 착수·답변 기록을 그대로 저장 → 복원하면 같은 순서로 다시 쌓여서 되돌리기도 가능 */
-   localStorage.setItem(SAVE_KEY,JSON.stringify({v:2,t:Date.now(),m:'play',x:[...S.xs],h:[...S.hs],b:[...S.bs],f:[...S.fs],o:packObs(),e:Date.now()-S.t0}))}
+   localStorage.setItem(SAVE_KEY,JSON.stringify({v:SAVE_V,t:Date.now(),m:'play',x:[...S.xs],h:[...S.hs],b:[...S.bs],f:[...S.fs],o:packObs(),e:Date.now()-S.t0}))}
   else if(S.xs.size||S.hs.size||S.bs.size||S.fs.size)
    localStorage.setItem(SAVE_KEY,JSON.stringify({v:1,t:Date.now(),m:'setup',x:[...S.xs],h:[...S.hs],b:[...S.bs],f:[...S.fs]}));
   else localStorage.removeItem(SAVE_KEY)
@@ -57,7 +62,7 @@ function restoreGame(){ /* 저장본이 있으면 S에 되살리고 true */
   if(!ok(d.x)||!ok(d.h)||!ok(d.b)||!ok(d.f)||d.f.length>3)return false;
   if(d.v===1&&d.m=='setup'){
    S.xs=new Set(d.x);S.hs=new Set(d.h);S.bs=new Set(d.b);S.fs=new Set(d.f);return true}
-  if(d.v!==2||d.m!=='play'||!Array.isArray(d.o))return false;
+  if(d.v!==SAVE_V||d.m!=='play'||!Array.isArray(d.o))return false;
   const xs=new Set(d.x),hs=new Set(d.h),bs=new Set(d.b),fs=new Set(d.f);
   const F0=[...fs],base=F0.map(i=>({i,k:'f',F:[]})).concat([...hs].map(i=>({i,k:'h',F:F0}))); /* 처음 설정에서 만들어지는 기록: 훈수 시작 때와 같은 방식 */
   const all=base.concat(d.o.map(p=>({...p}))),n=all.length;
@@ -183,7 +188,7 @@ function hint(){S.sel=null;S.rec=null;S.fb=false;S.sure=false;S.imp=null;S.ex=nu
    exRecPar((a,b,ms)=>{S.prog={a,b,ms};const t=L[S.lang],e=document.getElementById('xpn');if(e)e.innerHTML=progText(t);else msg.innerHTML=t.calc+progHtml(t)}) /* 진행 문구만 갱신해서 중단 버튼이 매번 새로 그려지지 않게 함 */
     .then(r=>{if(r>=0){S.rec=r;S.ex='ok'}else if(r==-2)S.ex='fb';else if(r==-3)S.ex='big';else if(r==-4)S.stopped=true;else if(r==-5)S.stopped='auto'})
     .catch(e=>console.error(e)).then(()=>{S.prog=null;S.busy=false;render()})}}
- catch(e){console.error(e);S.rec=-1}
+ catch(e){console.error(e);S.rec=-1;wait=false} /* 완전탐색 시작 중 예외가 나면 대기 상태를 풀어서 "계산 중"에서 멈추지 않게 함 */
  if(!wait){S.busy=false;render();track()}},40)}
 function act(a){
  if(a=='lang'){S.ov=true;S.q='';S.pg=0;ov.innerHTML=''}
@@ -210,4 +215,7 @@ document.onclick=e=>{const el=e.target.closest('[data-a],[data-i]');if(!el)retur
  if(el.id=='ov'&&e.target!==el)return; /* 오버레이 안쪽(입력창·빈 공간) 클릭은 닫지 않음, 어두운 배경만 닫기 */
  if(el.dataset.i!==undefined){const n=S.obs.length;tap(+el.dataset.i);if(S.mode=='play'&&S.obs.length!=n)go()}else act(el.dataset.a);render();track()};
 document.addEventListener('input',e=>{if(e.target.id=='lq'){S.q=e.target.value;S.pg=0;fillLg()}});
-restoreGame();render();if(S.mode=='play')go(); /* 저장된 판이 있으면 이어서 시작 (! 질문이 남아 있으면 질문부터) */
+function boot(){ /* 저장된 판이 있으면 이어서 시작 (! 질문이 남아 있으면 질문부터). 저장본 때문에 시작이 실패하면 저장본을 버리고 새로 시작 */
+ try{restoreGame();render();if(S.mode=='play')go()}
+ catch(e){console.error(e);try{localStorage.removeItem(SAVE_KEY)}catch(_){}const l=S.lang;init();S.lang=l;render()}}
+boot();
