@@ -133,7 +133,8 @@ function render(){
  else if(S.imp)m=F(t[{many:'need4',noplace:'nopl',fin3:'fin3'}[S.imp.k]]||L.en[{many:'need4',noplace:'nopl',fin3:'fin3'}[S.imp.k]],{n:S.imp.n})+(CF.length?`<div class="nt2">${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'');
  else if(found().length==3)m=t.done+oops(t);
  else if(S.sel!=null){
-  m=`<b>${LB(t,S.sel)}</b> — ?<div class="row eq"><button data-a="b">${t.b}</button><button data-a="h">${t.h}</button>${never(S.sel)?'':`<button class="p" data-a="f">${t.f}</button>`}<button data-a="cancel">✕</button></div>`}
+  const oc=outcomes(S.sel),can=k=>!oc||oc.has(k); /* 남은 후보에서 나올 수 없는 결과(빈칸/느낌표/당첨) 버튼은 숨김 */
+  m=`<b>${LB(t,S.sel)}</b> — ?<div class="row eq">${can('b')?`<button data-a="b">${t.b}</button>`:''}${can('h')?`<button data-a="h">${t.h}</button>`:''}${can('f')?`<button class="p" data-a="f">${t.f}</button>`:''}<button data-a="cancel">✕</button></div>`}
  else if(A.N==0&&!S.fb)m=LBRK(t.bad)+(CF.length?`<div class="nt2">${t.badc||L.en.badc}: ${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'')+nt;
  else if(S.rec!=null&&S.rec>=0){m=F(t.rec,{c:LB(t,S.rec),p:S.fb?pct(S.fbp):pct(A.p[S.rec])})+(S.fb&&!S.sure?`<div class="nt">${t.fbn||L.en.fbn}${CF.length?': '+CF.map(i=>LB(t,i)).join(' · '):''}</div>`:'')+exNote(t)+(S.stopped?`<div class="nt">${S.stopped=='auto'?'첫 칸 계산이 '+(EX_FIRST_MS/1000)+'초 안에 끝나지 않아 완전탐색을 자동으로 중단했습니다.':'완전탐색을 중단했습니다.'} 기본 추천을 보여드립니다.</div>`:'')+oops(t)+nt+(nt?'':`<div class="nt2">${LBRK(t.tip1.replace(/^[^.。।։።།។။۔]*[.。।։።།។။۔]\s*/,''))}</div>`)}
  else m=LBRK(t.tip1)+nt;

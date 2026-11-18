@@ -66,8 +66,12 @@ function outcome(i){
   const s=t.includes(i)?'f':t.some(j=>!F.includes(j)&&NB[i].includes(j))?'h':'b';
   if(r===null)r=s;else if(r!==s)return null}
  return r}
-/* 이 칸이 남은 후보 어디에서도 당첨이 아닌가(0% 확정)? 후보가 하나도 없으면 false */
-function never(i){const cf=cands();return cf.length>0&&!cf.some(t=>t.includes(i))}
+/* 이 칸을 눌렀을 때 남은 후보에서 나올 수 있는 결과들의 집합('f'/'h'/'b'). 후보가 없으면 null(전부 가능으로 취급) */
+function outcomes(i){
+ const cf=cands();if(!cf.length)return null;
+ const F=found(),r=new Set();
+ for(const t of cf){r.add(t.includes(i)?'f':t.some(j=>!F.includes(j)&&NB[i].includes(j))?'h':'b');if(r.size==3)break}
+ return r}
 
 function analyze(){
  const cf=cands(),N=cf.length,F=found(),op=opened();
