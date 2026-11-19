@@ -75,7 +75,7 @@ function prChoice(cf,F,op,k){
 (function(){
  const _appChoice=appChoice,_openRec=openRec;
  appChoice=function(cf,F,op,k){return XM?prChoice(cf,F,op,k):_appChoice(cf,F,op,k)}; /* deepRec·완전탐색의 기준 추천이 모두 이걸 거침 */
- openRec=function(){return typeof OPENX1!=='undefined'?_openRec(OPENX1,OPENX2,OPENX3,typeof OPENX4!=='undefined'?OPENX4:null,typeof OPENX5!=='undefined'?OPENX5:null):(XM?null:_openRec())}; /* 일반·x=6 모두 가중치로 계산한 표(OPENX1~5, tables.js). 균등 표(OPEN1~3)는 prior.js가 없을 때만 */
+ openRec=function(){return typeof OPENX1!=='undefined'?_openRec(OPENX1,OPENX2,OPENX3,typeof OPENX4!=='undefined'?OPENX4:null,typeof OPENX5!=='undefined'?OPENX5:null,typeof OPENX6!=='undefined'?OPENX6:null):(XM?null:_openRec())}; /* 일반·x=6 모두 가중치로 계산한 표(OPENX1~6, tables.js). 균등 표(OPEN1~3)는 prior.js가 없을 때만 */
 })();
 
 /* 완전탐색(x=6 전용)도 후보를 균등이 아니라 가중치로 평균: 기대 클릭 수를 가중 평균으로 계산. 워커에는 PF를 같이 넣어줌 */

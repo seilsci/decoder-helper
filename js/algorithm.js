@@ -270,12 +270,12 @@ function fallback(){
  if(!n)return null;
  let r=-1,m=0,pc=0;cnt.forEach((c,i)=>{const sc=c+((S.cl||[]).includes(i)?.5:0);if(sc>m){m=sc;r=i;pc=c}});
  return r<0?null:{i:r,p:pc/n}}
-function openRec(O1,O2,O3,O4,O5){ /* 시작 추천 표 찾기. 표를 안 넘기면 일반 모드 표(OPEN1~3), prior.js가 있으면 OPENX1~5를 넘김 */
+function openRec(O1,O2,O3,...OX){ /* 시작 추천 표 찾기. 표를 안 넘기면 일반 모드 표(OPEN1~3), prior.js가 있으면 OPENX1~3과 OPENX4~(OX)를 넘김 */
  O1=O1||OPEN1;O2=O2||OPEN2;O3=O3||OPEN3;
  if(S.xs.size!=2||S.os.size||S.n0)return null;
  const xk=[...S.xs].sort((a,b)=>a-b).join(',');
- const nc=S.obs.filter(o=>'bhf'.includes(o.k)).length,OD=nc==3?O4:nc==4?O5:null;
- if(OD){ /* 네·다섯 번째 수: 지금까지 누른 결과와 ! 답변을 순서대로 이은 키 (O4 = OPENX4, O5 = OPENX5) */
+ const nc=S.obs.filter(o=>'bhf'.includes(o.k)).length,OD=nc>=3?OX[nc-3]:null;
+ if(OD){ /* 네 번째 수부터: 지금까지 누른 결과와 ! 답변을 순서대로 이은 키 (OX[0] = OPENX4, OX[1] = OPENX5, ...) */
   if(S.obs.some(o=>o.manual)||pend().length)return null;
   const r=OD[xk+'|'+S.obs.map(o=>o.k=='r'?'r'+(o.h?1:0):o.i+'|'+o.k).join('|')];return r===undefined?null:r}
  if(!S.obs.length){const r=O1[xk];return r===undefined?null:r}
