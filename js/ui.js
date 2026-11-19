@@ -116,14 +116,14 @@ function render(){
  C.forEach((q,i)=>{
   const cx=q.x*40+20,cy=q.r*34.64+23,s=st=state(i),sw=17.6,w=15.2; /* 칸 사이 틈 (게임 화면처럼) */
   /* 게임 화면과 같은 규칙: 아직 안 연 칸 = 주황 테두리 + 점무늬 금색 빛(처음엔 전부 이 모양), 열린 빈칸·!·✕ = 어두운 칸, 당첨 = 밝은 금색 + 검은 별 */
-  let F='url(#gF)',K='#ffd25a',KW=2.2,tx='',tc='#2a1a00',to=1,fs=14,dot=1;
+  let F='#ffb300',K='#15120c',KW=1.5,tx='',tc='#2a1a00',to=1,fs=14,dot=0,fo=1; /* 숫자 칸: 예전 디자인(평평한 금색, 확률 높을수록 진하게) */
   if(s=='x'){F='url(#gC)';K='#4a4a52';KW=1.2;dot=0;tx='✕';tc='#8a8a90';fs=11}
   else if(s=='o'){F='url(#gC)';K='#4a4a52';KW=1.2;dot=0}
   else if(s=='h'){F='url(#gC)';K='#4a4a52';KW=1.2;dot=0;tx='!';tc='#f7c23a';fs=21}
-  else if(s=='f'){F='url(#gF)';K='#ffd25a';KW=2.2;tx='★';tc='#1a1300';fs=17}
-  else if(A&&A.N){tx=pct(A.p[i]);tc='#fff'} /* 확률 숫자: 흰 굵은 글씨 + 검은 외곽선 */
+  else if(s=='f'){F='url(#gF)';K='#ffd25a';KW=2.2;dot=1;tx='★';tc='#1a1300';fs=17}
+  else if(A&&A.N){tx=pct(A.p[i]);tc='#fff';fo=.18+.82*A.p[i]/pm} /* 확률 숫자: 흰 굵은 글씨 + 검은 외곽선 */
   const pts=[[0,-sw],[w,-sw/2],[w,sw/2],[0,sw],[-w,sw/2],[-w,-sw/2]].map(p=>(cx+p[0]).toFixed(1)+','+(cy+p[1]).toFixed(1)).join(' ');
-  g+=`<polygon data-i="${i}" class="${S.rec===i?'rec':''}" points="${pts}" fill="${F}" stroke="${K}" stroke-width="${KW}"${CF.includes(i)?' style="stroke:#ef4444;stroke-width:3.5"':''}/>`;
+  g+=`<polygon data-i="${i}" class="${S.rec===i?'rec':''}" points="${pts}" fill="${F}" fill-opacity="${fo}" stroke="${K}" stroke-width="${KW}"${CF.includes(i)?' style="stroke:#ef4444;stroke-width:3.5"':''}/>`;
   if(dot)g+=`<polygon points="${pts}" fill="url(#pD)" pointer-events="none"/>`;
   const ring=S.sel===i||PQ[0]===i?1.6:S.rec===i?2.4:0; /* 선택·추천: 게임처럼 바깥에 흰 테두리 (추천 칸은 조금 더 진하게) */
   if(ring)g+=`<polygon points="${[[0,-sw],[w,-sw/2],[w,sw/2],[0,sw],[-w,sw/2],[-w,-sw/2]].map(p=>(cx+p[0]*1.17).toFixed(1)+','+(cy+p[1]*1.17).toFixed(1)).join(' ')}" fill="none" stroke="#fff" stroke-width="${ring}" pointer-events="none"/>`;
