@@ -115,21 +115,20 @@ function render(){
  const pm=A&&A.N?Math.max(...A.p,.01):1;let g='';const CF=(play&&S.imp)?S.imp.cells:(A&&!A.N&&!S.sure)?conflict():[];
  C.forEach((q,i)=>{
   const cx=q.x*40+20,cy=q.r*34.64+23,s=st=state(i),sw=17.6,w=15.2; /* 칸 사이 틈 (게임 화면처럼) */
-  /* 게임 화면과 비슷하게 직접 그림: 바깥 육각형(테두리) + 안쪽 육각형(면). 닫힌 칸 = 검은 입체 칸, 빈칸 = 주황 테두리 + 점무늬 금색 빛, 당첨 = 진한 금색 */
-  let oF='#1d1d20',oS='#45454c',oW=1.3,iF='url(#gC)',iS='#3a3a40',tx='',tc='#fff',to=1,fs=14;
-  if(s=='x'){iF='#18181a';iS='#26262a';tx='✕';tc='#55555a';fs=11}
-  else if(s=='o'){oF='#2a1c06';oS='#f0961c';oW=2.1;iF='url(#gO)';iS='#d58a1e'}
-  else if(s=='f'){oF='#2a1c06';oS='#ffc23a';oW=2.3;iF='url(#gF)';iS='#ffe08a'}
+  /* 게임 화면과 비슷하게 직접 그림 (테두리 한 겹): 닫힌 칸 = 어두운 유리 느낌, 빈칸 = 주황 테두리 + 점무늬 금색 빛, 당첨 = 진한 금색 */
+  let F='url(#gC)',K='#4a4a52',KW=1.2,tx='',tc='#fff',to=1,fs=14;
+  if(s=='x'){F='#1a1a1d';K='#2e2e33';tx='✕';tc='#55555a';fs=11}
+  else if(s=='o'){F='url(#gO)';K='#f0961c';KW=2}
+  else if(s=='f'){F='url(#gF)';K='#ffd25a';KW=2.2}
   else if(s=='h'){tx='!';tc='#f7c23a';fs=21}
   else if(A&&A.N){tx=pct(A.p[i]);tc='#f2f2f2';to=.4+.6*A.p[i]/pm}
-  const hx=k=>[[0,-sw],[w,-sw/2],[w,sw/2],[0,sw],[-w,sw/2],[-w,-sw/2]].map(p=>(cx+p[0]*k).toFixed(1)+','+(cy+p[1]*k).toFixed(1)).join(' ');
-  g+=`<polygon data-i="${i}" class="${S.rec===i?'rec':''}" points="${hx(1)}" fill="${oF}" stroke="${oS}" stroke-width="${oW}"${S.sel===i||PQ[0]===i?' style="stroke:#fff;stroke-width:3.5"':CF.includes(i)?' style="stroke:#ef4444;stroke-width:3.5"':''}/>`;
-  g+=`<polygon points="${hx(.8)}" fill="${iF}" stroke="${iS}" stroke-width="1" pointer-events="none"/>`;
-  if(s=='o'||s=='f')g+=`<polygon points="${hx(.8)}" fill="url(#pD)" pointer-events="none"/>`;
+  const pts=[[0,-sw],[w,-sw/2],[w,sw/2],[0,sw],[-w,sw/2],[-w,-sw/2]].map(p=>(cx+p[0]).toFixed(1)+','+(cy+p[1]).toFixed(1)).join(' ');
+  g+=`<polygon data-i="${i}" class="${S.rec===i?'rec':''}" points="${pts}" fill="${F}" stroke="${K}" stroke-width="${KW}"${S.sel===i||PQ[0]===i?' style="stroke:#fff;stroke-width:3.5"':CF.includes(i)?' style="stroke:#ef4444;stroke-width:3.5"':''}/>`;
+  if(s=='o'||s=='f')g+=`<polygon points="${pts}" fill="url(#pD)" pointer-events="none"/>`;
   if(tx!=='')g+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${s=='c'?9:fs}" font-weight="${s=='h'?900:700}" fill="${tc}" fill-opacity="${to}" pointer-events="none">${tx}</text>`});
  bd.innerHTML='<defs>'+
-  '<linearGradient id="gC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b3b42"/><stop offset="1" stop-color="#222226"/></linearGradient>'+
-  '<radialGradient id="gO"><stop offset="0" stop-color="#f6ecc4"/><stop offset=".5" stop-color="#d8bb72"/><stop offset="1" stop-color="#9c6c1c"/></radialGradient>'+
+  '<linearGradient id="gC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34343a"/><stop offset=".5" stop-color="#232327"/><stop offset="1" stop-color="#2c2c31"/></linearGradient>'+
+  '<radialGradient id="gO"><stop offset="0" stop-color="#efe3b4"/><stop offset=".45" stop-color="#d9c084"/><stop offset=".8" stop-color="#b8872e"/><stop offset="1" stop-color="#c97a12"/></radialGradient>'+
   '<radialGradient id="gF"><stop offset="0" stop-color="#fff0a8"/><stop offset=".55" stop-color="#ffc63a"/><stop offset="1" stop-color="#e0901a"/></radialGradient>'+
   '<pattern id="pD" width="2.4" height="2.4" patternUnits="userSpaceOnUse"><circle cx="1.2" cy="1.2" r=".45" fill="#5a3a08" fill-opacity=".28"/></pattern>'+
   '</defs><rect x="1" y="1" width="358" height="184" rx="14" fill="#141416" stroke="#2a2a2e"/>'+g;
