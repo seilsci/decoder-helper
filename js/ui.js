@@ -117,7 +117,7 @@ function render(){
   const cx=q.x*40+20,cy=q.r*34.64+23,s=st=state(i),sw=17.6,w=15.2; /* 칸 사이 틈 (게임 화면처럼) */
   /* 게임 화면과 비슷하게 직접 그림 (테두리 한 겹): 닫힌 칸 = 어두운 유리 느낌, 빈칸 = 주황 테두리 + 점무늬 금색 빛, 당첨 = 진한 금색 */
   let F='url(#gC)',K='#4a4a52',KW=1.2,tx='',tc='#fff',to=1,fs=14;
-  if(s=='x'){F='#1a1a1d';K='#2e2e33';tx='✕';tc='#55555a';fs=11}
+  if(s=='x'){tx='✕';tc='#8a8a90';fs=11} /* ✕ 칸은 닫힌 칸과 같은 모양에 ✕만 */
   else if(s=='o'){F='url(#gO)';K='#f0961c';KW=2}
   else if(s=='f'){F='url(#gF)';K='#ffd25a';KW=2.2}
   else if(s=='h'){tx='!';tc='#f7c23a';fs=21}
