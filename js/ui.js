@@ -115,16 +115,16 @@ function render(){
  const pm=A&&A.N?Math.max(...A.p,.01):1;let g='';const CF=(play&&S.imp)?S.imp.cells:(A&&!A.N&&!S.sure)?conflict():[];
  C.forEach((q,i)=>{
   const cx=q.x*40+20,cy=q.r*34.64+23,s=st=state(i),sw=17.6,w=15.2; /* 칸 사이 틈 (게임 화면처럼) */
-  /* 게임 화면과 비슷하게 직접 그림 (테두리 한 겹): 닫힌 칸 = 어두운 유리 느낌, 빈칸 = 주황 테두리 + 점무늬 금색 빛, 당첨 = 진한 금색 */
-  let F='url(#gC)',K='#4a4a52',KW=1.2,tx='',tc='#fff',to=1,fs=14;
-  if(s=='x'){tx='✕';tc='#8a8a90';fs=11} /* ✕ 칸은 닫힌 칸과 같은 모양에 ✕만 */
-  else if(s=='o'){F='url(#gO)';K='#f0961c';KW=2}
+  /* 게임 화면과 같은 규칙: 아직 안 연 칸 = 주황 테두리 + 점무늬 금색 빛(처음엔 전부 이 모양), 열린 빈칸·!·✕ = 어두운 칸, 당첨 = 밝은 금색 + 검은 별 */
+  let F='url(#gO)',K='#f0961c',KW=2,tx='',tc='#2a1a00',to=1,fs=14,dot=1;
+  if(s=='x'){F='url(#gC)';K='#4a4a52';KW=1.2;dot=0;tx='✕';tc='#8a8a90';fs=11}
+  else if(s=='o'){F='url(#gC)';K='#4a4a52';KW=1.2;dot=0}
+  else if(s=='h'){F='url(#gC)';K='#4a4a52';KW=1.2;dot=0;tx='!';tc='#f7c23a';fs=21}
   else if(s=='f'){F='url(#gF)';K='#ffd25a';KW=2.2;tx='★';tc='#1a1300';fs=17}
-  else if(s=='h'){tx='!';tc='#f7c23a';fs=21}
-  else if(A&&A.N){tx=pct(A.p[i]);tc='#f2f2f2';to=.4+.6*A.p[i]/pm}
+  else if(A&&A.N){tx=pct(A.p[i]);to=.5+.5*A.p[i]/pm}
   const pts=[[0,-sw],[w,-sw/2],[w,sw/2],[0,sw],[-w,sw/2],[-w,-sw/2]].map(p=>(cx+p[0]).toFixed(1)+','+(cy+p[1]).toFixed(1)).join(' ');
   g+=`<polygon data-i="${i}" class="${S.rec===i?'rec':''}" points="${pts}" fill="${F}" stroke="${K}" stroke-width="${KW}"${CF.includes(i)?' style="stroke:#ef4444;stroke-width:3.5"':''}/>`;
-  if(s=='o'||s=='f')g+=`<polygon points="${pts}" fill="url(#pD)" pointer-events="none"/>`;
+  if(dot)g+=`<polygon points="${pts}" fill="url(#pD)" pointer-events="none"/>`;
   const ring=S.sel===i||PQ[0]===i?1.6:S.rec===i?2.4:0; /* 선택·추천: 게임처럼 바깥에 흰 테두리 (추천 칸은 조금 더 진하게) */
   if(ring)g+=`<polygon points="${[[0,-sw],[w,-sw/2],[w,sw/2],[0,sw],[-w,sw/2],[-w,-sw/2]].map(p=>(cx+p[0]*1.17).toFixed(1)+','+(cy+p[1]*1.17).toFixed(1)).join(' ')}" fill="none" stroke="#fff" stroke-width="${ring}" pointer-events="none"/>`;
   if(tx!=='')g+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${s=='c'?9:fs}" font-weight="${s=='h'?900:700}" fill="${tc}" fill-opacity="${to}" pointer-events="none">${tx}</text>`});
