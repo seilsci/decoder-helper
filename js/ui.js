@@ -123,12 +123,13 @@ function render(){
   else if(s=='h'){tx='!';tc='#f7c23a';fs=21}
   else if(A&&A.N){tx=pct(A.p[i]);tc='#f2f2f2';to=.4+.6*A.p[i]/pm}
   const pts=[[0,-sw],[w,-sw/2],[w,sw/2],[0,sw],[-w,sw/2],[-w,-sw/2]].map(p=>(cx+p[0]).toFixed(1)+','+(cy+p[1]).toFixed(1)).join(' ');
-  g+=`<polygon data-i="${i}" class="${S.rec===i?'rec':''}" points="${pts}" fill="${F}" stroke="${K}" stroke-width="${KW}"${S.sel===i||PQ[0]===i?' style="stroke:#fff;stroke-width:3.5"':CF.includes(i)?' style="stroke:#ef4444;stroke-width:3.5"':''}/>`;
+  g+=`<polygon data-i="${i}" class="${S.rec===i?'rec':''}" points="${pts}" fill="${F}" stroke="${K}" stroke-width="${KW}"${CF.includes(i)?' style="stroke:#ef4444;stroke-width:3.5"':''}/>`;
   if(s=='o'||s=='f')g+=`<polygon points="${pts}" fill="url(#pD)" pointer-events="none"/>`;
+  if(S.sel===i||PQ[0]===i)g+=`<polygon points="${[[0,-sw],[w,-sw/2],[w,sw/2],[0,sw],[-w,sw/2],[-w,-sw/2]].map(p=>(cx+p[0]*1.17).toFixed(1)+','+(cy+p[1]*1.17).toFixed(1)).join(' ')}" fill="none" stroke="#fff" stroke-width="1.6" pointer-events="none"/>`; /* 선택: 게임처럼 바깥에 얇은 흰 테두리 */
   if(tx!=='')g+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${s=='c'?9:fs}" font-weight="${s=='h'?900:700}" fill="${tc}" fill-opacity="${to}" pointer-events="none">${tx}</text>`});
  bd.innerHTML='<defs>'+
-  '<linearGradient id="gC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34343a"/><stop offset=".5" stop-color="#232327"/><stop offset="1" stop-color="#2c2c31"/></linearGradient>'+
-  '<radialGradient id="gO"><stop offset="0" stop-color="#efe3b4"/><stop offset=".45" stop-color="#d9c084"/><stop offset=".8" stop-color="#b8872e"/><stop offset="1" stop-color="#c97a12"/></radialGradient>'+
+  '<radialGradient id="gC" cx=".5" cy=".55" r=".62"><stop offset="0" stop-color="#0f0f11"/><stop offset=".55" stop-color="#151518"/><stop offset=".85" stop-color="#1f1f23"/><stop offset="1" stop-color="#2a2a2f"/></radialGradient>'+
+  '<radialGradient id="gO"><stop offset="0" stop-color="#e4d8a4"/><stop offset=".45" stop-color="#c9b273"/><stop offset=".78" stop-color="#9a6c20"/><stop offset="1" stop-color="#c47612"/></radialGradient>'+
   '<radialGradient id="gF"><stop offset="0" stop-color="#fff0a8"/><stop offset=".55" stop-color="#ffc63a"/><stop offset="1" stop-color="#e0901a"/></radialGradient>'+
   '<pattern id="pD" width="2.4" height="2.4" patternUnits="userSpaceOnUse"><circle cx="1.2" cy="1.2" r=".45" fill="#5a3a08" fill-opacity=".28"/></pattern>'+
   '</defs><rect x="1" y="1" width="358" height="184" rx="14" fill="#141416" stroke="#2a2a2e"/>'+g;
