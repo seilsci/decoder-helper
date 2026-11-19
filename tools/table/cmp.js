@@ -1,7 +1,7 @@
 // node cmp.js x — 기준선(baseline.json = 지금 main의 표) vs 이번 계산 표. 둘 다 지금 prior.js 가중치의 롤아웃과 함께
 // 판 전체 정확 기대 클릭을 [균등, pf, 실제 당첨률] 세 가지로 계산
 const E=require('./eng.js'),P=require('./pol.js'),fs=require('fs'),build=require('./ovmap.js');const x=+process.argv[2];
-const W3=[E.T.map(()=>1),P.TW,E.T.map(([a,b,c])=>P.RATE[a]*P.RATE[b]*P.RATE[c])];const gl=s=>3-s.filter(v=>v==='gift').length;
+const W3=[E.T.map(()=>1),P.TW,P.RTW];const gl=s=>3-s.filter(v=>v==='gift').length;
 function ev(OV){const memo=new Map();const f=(st,L)=>{if(gl(st)<=0||!L.length)return[0,0,0];if(L.length===1)return[gl(st),gl(st),gl(st)];const key=E.hashKey(st,L);const h=memo.get(key);if(h)return h;
  const t=OV.has(key)?OV.get(key):P.eng.decide(st,L);const W=[0,0,0],S=[0,0,0];for(const g of P.split(st,L,t)){const v=f(g.s,g.ls);for(let j=0;j<3;j++){let w=0;for(const k of g.ls)w+=W3[j][k];W[j]+=w;S[j]+=w*v[j]}}
  const v=W.map((w,j)=>1+S[j]/w);memo.set(key,v);return v};

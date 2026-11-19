@@ -76,6 +76,9 @@ function outcomes(i){
 function analyze(){
  const cf=cands(),N=cf.length,F=found(),op=opened();
  const ni=Array(42).fill(0),ex=Array(42).fill(0),bl=Array(42).fill(0);
+ /* 칸 확률 p: prior.js의 배치 가중치(triW: 칸 가중치 × 간격 계수)로 가중 평균. prior.js가 없으면 후보 수 비율 */
+ const wf=typeof triW=='function'?triW:null,pw=Array(42).fill(0);let W=0;
+ if(wf)for(const t of cf){const w=wf(t);W+=w;pw[t[0]]+=w;pw[t[1]]+=w;pw[t[2]]+=w}
  for(const t of cf){const un=t.filter(i=>!F.includes(i));
   for(let x=0;x<42;x++){if(op.has(x))continue;
    if(t.includes(x))ni[x]++;else if(NB[x].some(j=>un.includes(j)))ex[x]++;else bl[x]++}}
@@ -84,7 +87,7 @@ function analyze(){
   rec=sureRec(cf);
   if(rec<0)for(let x=0;x<42;x++){if(op.has(x))continue;
    const sc=2*ni[x]/N+1-(ni[x]**2+ex[x]**2+bl[x]**2)/(N*N);if(sc>best){best=sc;rec=x}}}
- return{N,p:ni.map(v=>N?v/N:0),rec}}
+ return{N,p:wf&&W>0?pw.map((v,x)=>op.has(x)?0:ni[x]===N?1:v/W):ni.map(v=>N?v/N:0),rec}}
 const ADJ=new Uint8Array(1764);NB.forEach((l,x)=>l.forEach(a=>ADJ[x*42+a]=1));
 const lf=(n,k)=>n&&k?k+.6*Math.log2(n):0;
 function best(cf,F,op,k,d,K){

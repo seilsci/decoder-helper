@@ -1,4 +1,4 @@
-/* rollout.js — 롤아웃 추천 (prior.js 가중치 PF를 넣어 계산)
+/* rollout.js — 롤아웃 추천 (prior.js 가중치 PF와 간격 계수 PRIOR_SP를 넣어 계산)
    후보 칸마다 "그 칸을 누른 뒤 기본 정책으로 끝까지 풀 때의 디코더 기대값"을 끝까지 정확히 계산해서 가장 작은 칸을 고름.
    배치가 2,500개 이하이면 상위 6칸은 "누른 뒤 한 수 더 롤아웃"으로 다시 평가.
    기존 deepRec(깊이 제한 + 어림식 잎 값)보다 4,800판 시뮬레이션에서 평균 약 0.08클릭 적음(균등).
@@ -8,13 +8,15 @@
    밖으로 내보내는 것: rollRec(pw) 지금 화면 상태로 바로 계산(동기) / rollRecAsync(pw) 같은 계산을 웹 워커에서(화면이 멈추지 않음, 실패하면 동기 계산으로 대체)
    pw = 칸별 당첨 가중치(prior.js의 PF). 없으면 균등
    rollEngine()은 계산 본체: 전역을 쓰지 않으므로 그대로 문자열로 바꿔 워커에 넣음 */
-function rollEngine(NBR,TT,PW){ /* NBR = 이웃 칸 목록(NB), TT = 트리플 표(T), PW = 칸별 당첨 가중치(42개, 없으면 균등) → (상태 배열, 배치 번호 배열) => 추천 칸 */
+function rollEngine(NBR,TT,PW,SP){ /* NBR = 이웃 칸 목록(NB), TT = 트리플 표(T), PW = 칸별 당첨 가중치(42개, 없으면 균등), SP = 당첨 칸 사이 거리 1·2·3의 간격 계수(없으면 1) → (상태 배열, 배치 번호 배열) => 추천 칸 */
  const N=42,GIFTS=3,imul=Math.imul;
  const bitLo=i=>(i<32?(1<<i)>>>0:0),bitHi=i=>(i>=32?1<<(i-32):0);
  /* 트리플 표: algorithm.js의 T와 같은 순서(a<b<c) → 번호 k가 T[k]와 같음 */
  const NT=TT.length,T_LO=new Uint32Array(NT),T_HI=new Uint32Array(NT);
- const TW=new Float64Array(NT); /* 배치 가중치 = 세 칸 가중치의 곱 (균등이면 모두 1) */
- for(let k=0;k<NT;k++){const[a,b,c]=TT[k];T_LO[k]=(bitLo(a)|bitLo(b)|bitLo(c))>>>0;T_HI[k]=bitHi(a)|bitHi(b)|bitHi(c);TW[k]=PW?PW[a]*PW[b]*PW[c]:1}
+ const TW=new Float64Array(NT); /* 배치 가중치 = 세 칸 가중치의 곱 × 세 쌍의 간격 계수 (균등이면 모두 1) */
+ const DST=NBR.map((_,s)=>{const d=new Array(N).fill(99);d[s]=0;const q=[s];while(q.length){const u=q.shift();for(const v of NBR[u])if(d[v]>d[u]+1){d[v]=d[u]+1;q.push(v)}}return d});
+ const spf=(a,b)=>{const d=DST[a][b];return SP&&d>=1&&d<=3?SP[d-1]:1};
+ for(let k=0;k<NT;k++){const[a,b,c]=TT[k];T_LO[k]=(bitLo(a)|bitLo(b)|bitLo(c))>>>0;T_HI[k]=bitHi(a)|bitHi(b)|bitHi(c);TW[k]=(PW?PW[a]*PW[b]*PW[c]:1)*spf(a,b)*spf(a,c)*spf(b,c)}
  const NB_LO=NBR.map(ns=>ns.reduce((m,i)=>(m|bitLo(i))>>>0,0)),NB_HI=NBR.map(ns=>ns.reduce((m,i)=>m|bitHi(i),0));
  const EPS=1e-12;
  /* 칸 상태: 'hidden' 닫힘 / 'x' / 'gift' 당첨 / 'warn' ! / 'open' 열림 */
@@ -95,10 +97,12 @@ function rollEngine(NBR,TT,PW){ /* NBR = 이웃 칸 목록(NB), TT = 트리플 �
 
 /* 가중치(pw)별 계산기: pw가 없으면 균등. 보통 prior.js의 PF를 넘김. PF가 시트 값으로 바뀌면 새 계산기·새 워커를 만듦 */
 const rollEng=new Map();
-const rollKey=pw=>pw?Array.prototype.join.call(pw,','):'u';
+/* 간격 계수(prior.js의 PRIOR_SP)는 가중치(pw)를 넘길 때만 함께 씀: pw 없음 = 균등(간격 없음) */
+const rollSP=pw=>pw&&typeof PRIOR_SP!=='undefined'?Array.from(PRIOR_SP):null;
+const rollKey=pw=>pw?Array.prototype.join.call(pw,',')+'|'+(rollSP(pw)||[]).join(','):'u';
 function rollDecideFor(pw){const k=rollKey(pw);let d=rollEng.get(k);
  if(!d){if(pw)for(const key of[...rollEng.keys()])if(key!=='u')rollEng.delete(key); /* 옛 가중치 계산기는 버림(메모리) */
-  d=rollEngine(NB,T,pw?Array.from(pw):null);rollEng.set(k,d)}
+  d=rollEngine(NB,T,pw?Array.from(pw):null,rollSP(pw));rollEng.set(k,d)}
  return d}
 const rollTIX=new Map();T.forEach((t,k)=>rollTIX.set(t,k)); /* cands()의 트리플 → 번호 */
 const ROLL_MAP={c:'hidden',x:'x',f:'gift',h:'warn',o:'open'};
@@ -116,7 +120,7 @@ function rollRecAsync(pw){
  try{
   if(!w){
    if(pw)for(const[key,ow]of[...rollWs])if(key!=='u'){try{ow.terminate()}catch(_){}rollWs.delete(key)} /* 옛 가중치 워커는 끝냄 */
-   const src='const decide=('+rollEngine.toString()+')('+JSON.stringify(NB)+','+JSON.stringify(T)+','+(pw?JSON.stringify(Array.from(pw)):'null')+');onmessage=e=>postMessage({id:e.data.id,r:decide(e.data.st,e.data.ls)});';
+   const src='const decide=('+rollEngine.toString()+')('+JSON.stringify(NB)+','+JSON.stringify(T)+','+(pw?JSON.stringify(Array.from(pw)):'null')+','+JSON.stringify(rollSP(pw))+');onmessage=e=>postMessage({id:e.data.id,r:decide(e.data.st,e.data.ls)});';
    w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));rollWs.set(k,w)}
  }catch(e){console.error(e);return Promise.resolve(sync())} /* 워커를 못 쓰면 바로 계산 */
  const id=++rollSeq;

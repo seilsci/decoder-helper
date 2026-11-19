@@ -43,7 +43,7 @@ for(const l of JSON.parse(fs.readFileSync(__dirname+'/out5/g5.'+x+'.json')).log)
 for(let k=6;k<NN;k++)for(const l of JSON.parse(fs.readFileSync(__dirname+'/out'+k+'/g'+k+'.'+x+'.json')).log)OV123.set(l.hk,l.best);
 const OV4=new Map(OV123);for(const l of LOG)OV4.set(l.hk,l.best);
 const st=new Array(42).fill('hidden');st[x]='x';st[41-x]='x';const L0=[];E.T.forEach((t,q)=>{if(!t.includes(x)&&!t.includes(41-x))L0.push(q)});
-const RATE=P.RATE;const EW=E.T.map(([a,b,c])=>RATE[a]*RATE[b]*RATE[c]);
+const EW=P.RTW;
 function evalW(ov,W8){const m=new Map();const f=(st,L)=>{if(gl(st)<=0||!L.length)return 0;if(L.length===1)return gl(st);
  const key=E.hashKey(st,L);const h=m.get(key);if(h!==undefined)return h;const t=ov.has(key)?ov.get(key):P.eng.decide(st,L);
  let W=0,S=0;for(const g of P.split(st,L,t)){let w=0;for(const k of g.ls)w+=W8[k];W+=w;S+=w*f(g.s,g.ls)}const v=1+S/W;m.set(key,v);return v};return f(st,L0)}

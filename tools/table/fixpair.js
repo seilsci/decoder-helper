@@ -1,6 +1,6 @@
 // node fixpair.js n x — n단계 표에서 x쌍의 바뀐 칸을 하나씩 넣어 실제 분포 효과를 재고, 손해인 칸 목록(obs)을 JSON으로 출력
 const P=require('./pol.js'),E=require('./eng.js'),fs=require('fs');const n=+process.argv[2],x=+process.argv[3];
-const RATE=P.RATE;const EW=E.T.map(([a,b,c])=>RATE[a]*RATE[b]*RATE[c]);
+const EW=P.RTW;
 const gl=s=>3-s.filter(v=>v==='gift').length;
 const base=new Map();for(const l of JSON.parse(fs.readFileSync(__dirname+'/out2/g2.'+x+'.json')).log)base.set(l.hk,l.best);
 if(n>4)for(const l of JSON.parse(fs.readFileSync(__dirname+'/out4/g4.'+x+'.json')).log)base.set(l.hk,l.best);
