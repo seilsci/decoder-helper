@@ -127,7 +127,7 @@ function render(){
   if(dot)g+=`<polygon points="${pts}" fill="url(#pD)" pointer-events="none"/>`;
   const ring=S.sel===i||PQ[0]===i?1.6:S.rec===i?2.4:0; /* 선택·추천: 게임처럼 바깥에 흰 테두리 (추천 칸은 조금 더 진하게) */
   if(ring)g+=`<polygon points="${[[0,-sw],[w,-sw/2],[w,sw/2],[0,sw],[-w,sw/2],[-w,-sw/2]].map(p=>(cx+p[0]*1.07).toFixed(1)+','+(cy+p[1]*1.07).toFixed(1)).join(' ')}" fill="none" stroke="#fff" stroke-width="${ring}" pointer-events="none"/>`;
-  if(tx!=='')g+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${s=='c'?10:fs}" font-weight="${s=='h'?900:700}" fill="${tc}" fill-opacity="${to}"${s=='c'?' font-family="Chakra Petch,system-ui,sans-serif" stroke="#000" stroke-width="2.2" stroke-linejoin="round" paint-order="stroke"':''} pointer-events="none">${tx}</text>`});
+  if(tx!=='')g+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${s=='c'?10:fs}" font-weight="${s=='h'?900:700}" fill="${tc}" fill-opacity="${to}"${s=='c'?' font-family="Rajdhani,system-ui,sans-serif" stroke="#000" stroke-width="2.2" stroke-linejoin="round" paint-order="stroke"':''} pointer-events="none">${tx}</text>`});
  bd.innerHTML='<defs>'+
   '<radialGradient id="gC" cx=".5" cy=".55" r=".62"><stop offset="0" stop-color="#0f0f11"/><stop offset=".55" stop-color="#151518"/><stop offset=".85" stop-color="#1f1f23"/><stop offset="1" stop-color="#2a2a2f"/></radialGradient>'+
   '<radialGradient id="gO"><stop offset="0" stop-color="#e4d8a4"/><stop offset=".45" stop-color="#c9b273"/><stop offset=".78" stop-color="#9a6c20"/><stop offset="1" stop-color="#c47612"/></radialGradient>'+
