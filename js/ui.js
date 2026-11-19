@@ -121,13 +121,13 @@ function render(){
   else if(s=='o'){F='url(#gC)';K='#4a4a52';KW=1.2;dot=0}
   else if(s=='h'){F='url(#gC)';K='#4a4a52';KW=1.2;dot=0;tx='!';tc='#f7c23a';fs=21}
   else if(s=='f'){F='url(#gF)';K='#ffd25a';KW=2.2;tx='★';tc='#1a1300';fs=17}
-  else if(A&&A.N){tx=pct(A.p[i]);to=.5+.5*A.p[i]/pm}
+  else if(A&&A.N){tx=pct(A.p[i]);tc='#fff'} /* 확률 숫자: 흰 굵은 글씨 + 검은 외곽선 */
   const pts=[[0,-sw],[w,-sw/2],[w,sw/2],[0,sw],[-w,sw/2],[-w,-sw/2]].map(p=>(cx+p[0]).toFixed(1)+','+(cy+p[1]).toFixed(1)).join(' ');
   g+=`<polygon data-i="${i}" class="${S.rec===i?'rec':''}" points="${pts}" fill="${F}" stroke="${K}" stroke-width="${KW}"${CF.includes(i)?' style="stroke:#ef4444;stroke-width:3.5"':''}/>`;
   if(dot)g+=`<polygon points="${pts}" fill="url(#pD)" pointer-events="none"/>`;
   const ring=S.sel===i||PQ[0]===i?1.6:S.rec===i?2.4:0; /* 선택·추천: 게임처럼 바깥에 흰 테두리 (추천 칸은 조금 더 진하게) */
   if(ring)g+=`<polygon points="${[[0,-sw],[w,-sw/2],[w,sw/2],[0,sw],[-w,sw/2],[-w,-sw/2]].map(p=>(cx+p[0]*1.17).toFixed(1)+','+(cy+p[1]*1.17).toFixed(1)).join(' ')}" fill="none" stroke="#fff" stroke-width="${ring}" pointer-events="none"/>`;
-  if(tx!=='')g+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${s=='c'?9:fs}" font-weight="${s=='h'?900:700}" fill="${tc}" fill-opacity="${to}" pointer-events="none">${tx}</text>`});
+  if(tx!=='')g+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${s=='c'?10:fs}" font-weight="${s=='h'||s=='c'?900:700}" fill="${tc}" fill-opacity="${to}"${s=='c'?' stroke="#000" stroke-width="2.2" stroke-linejoin="round" paint-order="stroke"':''} pointer-events="none">${tx}</text>`});
  bd.innerHTML='<defs>'+
   '<radialGradient id="gC" cx=".5" cy=".55" r=".62"><stop offset="0" stop-color="#0f0f11"/><stop offset=".55" stop-color="#151518"/><stop offset=".85" stop-color="#1f1f23"/><stop offset="1" stop-color="#2a2a2f"/></radialGradient>'+
   '<radialGradient id="gO"><stop offset="0" stop-color="#e4d8a4"/><stop offset=".45" stop-color="#c9b273"/><stop offset=".78" stop-color="#9a6c20"/><stop offset="1" stop-color="#c47612"/></radialGradient>'+
