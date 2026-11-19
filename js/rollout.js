@@ -1,12 +1,12 @@
-/* rollout.js — 롤아웃 추천 (일반·x=6 모두 prior.js 가중치 PF를 넣어 계산. x=6만 후보가 적으면 그 뒤 완전탐색)
+/* rollout.js — 롤아웃 추천 (prior.js 가중치 PF를 넣어 계산)
    후보 칸마다 "그 칸을 누른 뒤 기본 정책으로 끝까지 풀 때의 디코더 기대값"을 끝까지 정확히 계산해서 가장 작은 칸을 고름.
    배치가 2,500개 이하이면 상위 6칸은 "누른 뒤 한 수 더 롤아웃"으로 다시 평가.
    기존 deepRec(깊이 제한 + 어림식 잎 값)보다 4,800판 시뮬레이션에서 평균 약 0.08클릭 적음(균등).
-   x=6(가중치, 실제 기록 분포로 만든 4,800판)에서도 기존 x=6 휴리스틱보다 약 0.05클릭 적음(완전탐색 제외 비교).
+   실제 기록 분포로 만든 4,800판에서도 기존 휴리스틱보다 약 0.05클릭 적음.
    선물을 찾으면 옆 '!' 가 남는지/꺼지는지도 결과로 구분해서 계산함(! 재질문 정보 반영).
    algorithm.js 다음, ui.js 앞에서 불러옴.
    밖으로 내보내는 것: rollRec(pw) 지금 화면 상태로 바로 계산(동기) / rollRecAsync(pw) 같은 계산을 웹 워커에서(화면이 멈추지 않음, 실패하면 동기 계산으로 대체)
-   pw = 칸별 당첨 가중치(x=6 모드의 PF). 없으면 균등
+   pw = 칸별 당첨 가중치(prior.js의 PF). 없으면 균등
    rollEngine()은 계산 본체: 전역을 쓰지 않으므로 그대로 문자열로 바꿔 워커에 넣음 */
 function rollEngine(NBR,TT,PW){ /* NBR = 이웃 칸 목록(NB), TT = 트리플 표(T), PW = 칸별 당첨 가중치(42개, 없으면 균등) → (상태 배열, 배치 번호 배열) => 추천 칸 */
  const N=42,GIFTS=3,imul=Math.imul;
@@ -93,7 +93,7 @@ function rollEngine(NBR,TT,PW){ /* NBR = 이웃 칸 목록(NB), TT = 트리플 �
   return -1}
  return(st,layouts)=>decide({st,layouts})}
 
-/* 가중치(pw)별 계산기: pw가 없으면 균등. x=6 모드는 prior.js의 PF를 넘김. PF가 시트 값으로 바뀌면 새 계산기·새 워커를 만듦 */
+/* 가중치(pw)별 계산기: pw가 없으면 균등. 보통 prior.js의 PF를 넘김. PF가 시트 값으로 바뀌면 새 계산기·새 워커를 만듦 */
 const rollEng=new Map();
 const rollKey=pw=>pw?Array.prototype.join.call(pw,','):'u';
 function rollDecideFor(pw){const k=rollKey(pw);let d=rollEng.get(k);

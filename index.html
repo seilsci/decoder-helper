@@ -4,12 +4,11 @@
 <title>Decoder Helper</title>
 <link rel="stylesheet" href="style.css">
 <script defer src="https://cloud.umami.is/script.js" data-website-id="44adabee-49c9-4046-9626-1d9ad1577cbc"></script></head><body><main>
-<header><h1 id="ti"></h1><div style="display:flex;align-items:center;gap:8px"><input id="exn" type="number" min="1" step="1" value="30" title="완전탐색 후보 상한" hidden style="width:64px;padding:8px 6px;border-radius:10px;border:1px solid #4a3f2a;background:#2a2418;color:#f3e9d2;font-size:14px;text-align:center"><button data-a="lang" id="lg"></button></div></header>
+<header><h1 id="ti"></h1><div style="display:flex;align-items:center;gap:8px"><button data-a="lang" id="lg"></button></div></header>
 <svg id="bd" viewBox="0 0 360 186"></svg>
 <div class="row" id="tl"></div>
 <div class="row eq"><button class="p" data-a="hint" id="bh"></button><button data-a="undo" id="bu"></button><button data-a="reset" id="br"></button></div>
 <div id="msg"></div>
-<div id="dbg" style="font-size:12px;color:#8cf;margin:6px 4px;word-break:break-all"></div>
 <p><small id="cn"></small></p>
 </main>
 <div id="ov" data-a="ovx" hidden></div>
@@ -21,27 +20,4 @@
 <script src="js/rollout.js"></script>
 <script src="js/prior.js"></script>
 <script src="js/ui.js"></script>
-<script>
-(function(){
- var d=document.getElementById('dbg'),m=document.getElementById('msg'),inp=document.getElementById('exn');
- function on(){return XM&&S.lang==='ko'}
- function upd(){
-  try{
-   inp.hidden=!on();
-   if(!on()){d.textContent='';return}
-   var N=cands().length,k=3-found().length;
-   var r=(typeof PF!=='undefined'?'가중치 적용('+(typeof PRIOR_SRC!=='undefined'?PRIOR_SRC:'')+') · ':'prior.js 없음 · ')+((N>=2&&k>=1&&N<=EX_MAXN)?'완전탐색':'롤아웃');
-   d.textContent='[x=6 디버그] 후보 '+N+'개 · 남은 당첨 '+k+' · 상한 '+EX_MAXN+' · '+r
-  }catch(e){d.textContent='[디버그 오류] '+e.message}
- }
- inp.addEventListener('change',function(){
-  var v=parseInt(inp.value,10);
-  if(!(v>=1)){v=30}
-  inp.value=v;EX_MAXN=v;upd();
- });
- new MutationObserver(upd).observe(m,{childList:true,subtree:true,characterData:true});
- window.addEventListener('priorloaded',upd); /* prior.js가 시트 값을 받아오면 디버그 줄 갱신 */
- setTimeout(upd,0);
-})();
-</script>
 </body></html>
