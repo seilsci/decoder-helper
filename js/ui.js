@@ -116,7 +116,7 @@ function render(){
  C.forEach((q,i)=>{
   const cx=q.x*40+20,cy=q.r*34.64+23,s=st=state(i),sw=17.6,w=15.2; /* 칸 사이 틈 (게임 화면처럼) */
   /* 게임 화면과 같은 규칙: 아직 안 연 칸 = 주황 테두리 + 점무늬 금색 빛(처음엔 전부 이 모양), 열린 빈칸·!·✕ = 어두운 칸, 당첨 = 밝은 금색 + 검은 별 */
-  let F='url(#gO)',K='#f0961c',KW=2,tx='',tc='#2a1a00',to=1,fs=14,dot=1;
+  let F='url(#gF)',K='#ffd25a',KW=2.2,tx='',tc='#2a1a00',to=1,fs=14,dot=1;
   if(s=='x'){F='url(#gC)';K='#4a4a52';KW=1.2;dot=0;tx='✕';tc='#8a8a90';fs=11}
   else if(s=='o'){F='url(#gC)';K='#4a4a52';KW=1.2;dot=0}
   else if(s=='h'){F='url(#gC)';K='#4a4a52';KW=1.2;dot=0;tx='!';tc='#f7c23a';fs=21}
