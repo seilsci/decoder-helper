@@ -14,7 +14,7 @@ const PF=PRIOR_CNT.map((c,i)=>prW(c,PRIOR_EXPO[i]));
 /* 자동 갱신: 앱스 스크립트(REC_URL)의 doGet이 시트 prior 탭의 값을 JSON으로 돌려주면, 페이지가 다 열린 뒤 그 값으로 위 배열과 PF를 덮어씀.
    불러오기에 실패하거나 값이 이상하면 위 내장값을 그대로 사용(오류가 나도 화면에는 영향 없음). 끄려면 PRIOR_AUTO를 false로.
    PRIOR_SRC는 현재 값의 출처 표시(디버그 줄에 나옴): 불러오는 중 / 시트 N판 / 내장값(실패: 이유) */
-const PRIOR_AUTO=true;
+const PRIOR_AUTO=false; /* 끔: 추천 표(OPENX1~13)를 이 파일의 내장값으로 계산했으므로 앱도 같은 값을 씀. 기록이 쌓이면 위 두 배열을 바꾸고 tools/table로 표를 다시 만듦 */
 let PRIOR_SRC=PRIOR_AUTO?'불러오는 중':'내장값';
 function priorDone(){try{window.dispatchEvent(new Event('priorloaded'))}catch(e){}} /* 표시 갱신용 알림 */
 if(PRIOR_AUTO&&typeof window!=='undefined')window.addEventListener('load',function(){
