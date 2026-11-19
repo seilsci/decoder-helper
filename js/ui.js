@@ -119,7 +119,7 @@ function render(){
   let F='url(#gC)',K='#4a4a52',KW=1.2,tx='',tc='#fff',to=1,fs=14;
   if(s=='x'){tx='✕';tc='#8a8a90';fs=11} /* ✕ 칸은 닫힌 칸과 같은 모양에 ✕만 */
   else if(s=='o'){F='url(#gO)';K='#f0961c';KW=2}
-  else if(s=='f'){F='url(#gF)';K='#ffd25a';KW=2.2}
+  else if(s=='f'){F='url(#gF)';K='#ffd25a';KW=2.2;tx='★';tc='#1a1300';fs=17}
   else if(s=='h'){tx='!';tc='#f7c23a';fs=21}
   else if(A&&A.N){tx=pct(A.p[i]);tc='#f2f2f2';to=.4+.6*A.p[i]/pm}
   const pts=[[0,-sw],[w,-sw/2],[w,sw/2],[0,sw],[-w,sw/2],[-w,-sw/2]].map(p=>(cx+p[0]).toFixed(1)+','+(cy+p[1]).toFixed(1)).join(' ');
