@@ -11,7 +11,7 @@ button.p{background:#ffb300;color:#1a1300;font-weight:700}
 .row button.p{flex:2}
 .row.eq button,.row.eq button.p{flex:1 1 0;min-width:0}
 svg{width:100%;height:auto;display:block;touch-action:manipulation}
-polygon{stroke:#15120c;stroke-width:1.5;cursor:pointer}
+polygon{cursor:pointer}
 #msg{min-height:4.6em;background:#1f1a10;border-radius:10px;padding:10px 12px}
 #msg .row{margin:8px 0 0}
 #msg .nt2{margin-top:8px}

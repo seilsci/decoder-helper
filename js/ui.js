@@ -114,17 +114,17 @@ function render(){
  ti.textContent=t.t;lg.textContent='🌐 '+t.lang;bh.textContent=t.hint;bu.textContent=t.undo;br.textContent=t.reset;
  const pm=A&&A.N?Math.max(...A.p,.01):1;let g='';const CF=(play&&S.imp)?S.imp.cells:(A&&!A.N&&!S.sure)?conflict():[];
  C.forEach((q,i)=>{
-  const cx=q.x*40+20,cy=q.r*34.64+23,s=st=state(i),sw=21.4,w=18.6;
-  let fill='#ffb300',op=.55,tx='',tc='#fff';
-  if(s=='x'){fill='#2a2a2a';op=1;tx='✕';tc='#888'}
-  else if(s=='o'){fill='#241f14';op=1}
-  else if(s=='h'){fill='#241f14';op=1;tx='!';tc='#ffb300'}
-  else if(s=='f'){fill='#ffb300';op=1;tx='★';tc='#1a1300'}
-  else if(A&&A.N){op=.18+.82*A.p[i]/pm;tx=pct(A.p[i])}
+  const cx=q.x*40+20,cy=q.r*34.64+23,s=st=state(i),sw=20.2,w=17.5; /* 칸 사이 틈 (게임 화면처럼) */
+  let fill='#2b2b2e',op=1,tx='',tc='#fff',sk='#3c3c40',skw=1.5,to=1,fs=14; /* 게임 화면과 같은 색: 닫힌 칸 어두운 회색, 빈칸 금색 빛, 당첨 진한 금색 */
+  if(s=='x'){fill='#1f1f21';tx='✕';tc='#5a5a5e';fs=12}
+  else if(s=='o'){fill='url(#gO)';sk='#f29a1d';skw=2.4}
+  else if(s=='h'){tx='!';tc='#ffc531';fs=20}
+  else if(s=='f'){fill='#ffb81c';sk='#ffe39a';skw=2.6}
+  else if(A&&A.N){tx=pct(A.p[i]);tc='#f2f2f2';to=.4+.6*A.p[i]/pm}
   const pts=[[0,-sw],[w,-sw/2],[w,sw/2],[0,sw],[-w,sw/2],[-w,-sw/2]].map(p=>(cx+p[0]).toFixed(1)+','+(cy+p[1]).toFixed(1)).join(' ');
-  g+=`<polygon data-i="${i}" class="${S.rec===i?'rec':''}" points="${pts}" fill="${fill}" fill-opacity="${op}"${S.sel===i||PQ[0]===i?' style="stroke:#fff;stroke-width:3.5"':CF.includes(i)?' style="stroke:#ef4444;stroke-width:3.5"':''}/>`;
-  if(tx!=='')g+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${s=='c'?9:14}" font-weight="700" fill="${tc}" pointer-events="none">${tx}</text>`});
- bd.innerHTML=g;
+  g+=`<polygon data-i="${i}" class="${S.rec===i?'rec':''}" points="${pts}" fill="${fill}" fill-opacity="${op}" stroke="${sk}" stroke-width="${skw}"${S.sel===i||PQ[0]===i?' style="stroke:#fff;stroke-width:3.5"':CF.includes(i)?' style="stroke:#ef4444;stroke-width:3.5"':''}/>`;
+  if(tx!=='')g+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="central" font-size="${s=='c'?9:fs}" font-weight="${s=='h'?900:700}" fill="${tc}" fill-opacity="${to}" pointer-events="none">${tx}</text>`});
+ bd.innerHTML='<defs><radialGradient id="gO"><stop offset="0" stop-color="#f3e7b8"/><stop offset=".55" stop-color="#cfae62"/><stop offset="1" stop-color="#a8701c"/></radialGradient></defs>'+g;
  let m;
  const nt='';
  if(!play)m=LBRK(t.tip0)+`<div class="st">${(t.st||L.en.st).replace(/([.。।։።།។။۔])\s*/,'$1<br>')}</div>`;
