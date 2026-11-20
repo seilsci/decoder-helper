@@ -108,11 +108,16 @@ function pct(p){
  if(p<=0)return 0;
  return Math.min(99,Math.max(1,Math.round(p*100)))}
 
+/* 화면에 보이는 칸 확률: 일반 사용자에게는 균등(남은 후보 배치 수 비율)만 보여 줌. 추천 계산은 그대로 가중치(prior.js)를 씀.
+   주소 끝에 ?w=1 로 한 번 들어오면 이 기기에서는 가중치 확률을 보여 줌(?w=0 으로 끔) */
+const SHOW_W=(()=>{try{const q=new URLSearchParams(location.search).get('w');if(q==='1')localStorage.setItem('dh_w','1');else if(q==='0')localStorage.removeItem('dh_w');return localStorage.getItem('dh_w')==='1'}catch(e){return false}})();
+function shownP(A){if(!A||SHOW_W)return A?A.p:null;const cf=cands(),N=cf.length,ni=Array(42).fill(0);for(const t of cf){ni[t[0]]++;ni[t[1]]++;ni[t[2]]++}
+ const op=opened();return ni.map((v,x)=>op.has(x)||!N?0:v/N)}
 function render(){
- const t=L[S.lang],play=S.mode=='play',A=play?analyze():null,PQ=play?pend():[];
+ const t=L[S.lang],play=S.mode=='play',A=play?analyze():null,PQ=play?pend():[],DP=shownP(A);
  document.documentElement.lang=S.lang;
  ti.textContent=t.t;lg.textContent='🌐 '+t.lang;bh.textContent=t.hint;bu.textContent=t.undo;br.textContent=t.reset;
- const pm=A&&A.N?Math.max(...A.p,.01):1;let g='';const CF=(play&&S.imp)?S.imp.cells:(A&&!A.N&&!S.sure)?conflict():[];
+ const pm=A&&A.N?Math.max(...DP,.01):1;let g='';const CF=(play&&S.imp)?S.imp.cells:(A&&!A.N&&!S.sure)?conflict():[];
  C.forEach((q,i)=>{
   const cx=q.x*40+20,cy=q.r*34.64+23,s=st=state(i),sw=21.4,w=18.6; /* 칸 사이 틈 (게임 화면처럼) */
   /* 게임 화면과 같은 규칙: 아직 안 연 칸 = 주황 테두리 + 점무늬 금색 빛(처음엔 전부 이 모양), 열린 빈칸·!·✕ = 어두운 칸, 당첨 = 밝은 금색 + 검은 별 */
@@ -121,7 +126,7 @@ function render(){
   else if(s=='o'){F='url(#gC)';K='#4a4a52';KW=1.2;dot=0}
   else if(s=='h'){F='url(#gC)';K='#4a4a52';KW=1.2;dot=0;tx='!';tc='#f7c23a';fs=21}
   else if(s=='f'){F='url(#gF)';K='#ffd25a';KW=2.2;dot=1;tx='★';tc='#1a1300';fs=17}
-  else if(A&&A.N){tx=pct(A.p[i]);tc='#fff';fo=.18+.82*A.p[i]/pm} /* 확률 숫자: 흰 굵은 글씨 + 검은 외곽선 */
+  else if(A&&A.N){tx=pct(DP[i]);tc='#fff';fo=.18+.82*DP[i]/pm} /* 확률 숫자: 흰 굵은 글씨 + 검은 외곽선 */
   const pts=[[0,-sw],[w,-sw/2],[w,sw/2],[0,sw],[-w,sw/2],[-w,-sw/2]].map(p=>(cx+p[0]).toFixed(1)+','+(cy+p[1]).toFixed(1)).join(' ');
   g+=`<polygon data-i="${i}" class="${S.rec===i?'rec':''}" points="${pts}" fill="${F}" fill-opacity="${fo}" stroke="${K}" stroke-width="${KW}"${CF.includes(i)?' style="stroke:#ef4444;stroke-width:3.5"':''}/>`;
   if(dot)g+=`<polygon points="${pts}" fill="url(#pD)" pointer-events="none"/>`;
@@ -145,7 +150,7 @@ function render(){
   const oc=outcomes(S.sel),can=k=>!oc||oc.has(k); /* 남은 후보에서 나올 수 없는 결과(빈칸/느낌표/당첨) 버튼은 숨김 */
   m=`<b>${LB(t,S.sel)}</b> — ?<div class="row eq">${can('b')?`<button data-a="b">${t.b}</button>`:''}${can('h')?`<button data-a="h">${t.h}</button>`:''}${can('f')?`<button class="p" data-a="f">${t.f}</button>`:''}<button data-a="cancel">✕</button></div>`}
  else if(A.N==0&&!S.fb)m=LBRK(t.bad)+(CF.length?`<div class="nt2">${t.badc||L.en.badc}: ${CF.map(i=>LB(t,i)).join(' · ')}</div>`:'')+nt;
- else if(S.rec!=null&&S.rec>=0){m=F(t.rec,{c:LB(t,S.rec),p:S.fb?pct(S.fbp):pct(A.p[S.rec])})+(S.fb&&!S.sure?`<div class="nt">${t.fbn||L.en.fbn}${CF.length?': '+CF.map(i=>LB(t,i)).join(' · '):''}</div>`:'')+oops(t)+nt+(nt?'':`<div class="nt2">${LBRK(t.tip1.replace(/^[^.。।։።།។။۔]*[.。।։።།។။۔]\s*/,''))}</div>`)}
+ else if(S.rec!=null&&S.rec>=0){m=F(t.rec,{c:LB(t,S.rec),p:S.fb?pct(S.fbp):pct(DP[S.rec])})+(S.fb&&!S.sure?`<div class="nt">${t.fbn||L.en.fbn}${CF.length?': '+CF.map(i=>LB(t,i)).join(' · '):''}</div>`:'')+oops(t)+nt+(nt?'':`<div class="nt2">${LBRK(t.tip1.replace(/^[^.。।։።།។။۔]*[.。।։።།។။۔]\s*/,''))}</div>`)}
  else m=LBRK(t.tip1)+nt;
  msg.innerHTML=m;msg.dir=cn.dir=LRTL.includes(S.lang)?'rtl':'ltr';
  cn.textContent=play?F(t.n,{a:clicks(),b:found().length}):'';
