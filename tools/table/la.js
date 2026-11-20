@@ -1,4 +1,4 @@
-// 탐색 강화(자주 나오는 장면만): node la.js <x> [가중 비율, 기본 0.9] [첫 수, 기본 4] [끝 수, 기본 8]
+// 탐색 강화: node la.js <x>   (환경 변수 LA_FR = 수마다 고를 도달 확률 비율, 기본 0.9, 1이면 전부 / LA_N0, LA_N1 = 첫 수·끝 수, 기본 4·8)
 //  지금 표 정책 π(out2·out4~13 표, 없으면 롤아웃)로 판을 진행할 때 n번째 수(기본 4~8)에 나오는 장면을
 //  도달 확률 순으로 골라, 수마다 확률 합이 비율(기본 90%)이 될 때까지의 장면에서
 //  Q^π(s,t) = 1 + Σ 결과 확률 × V^π(다음 장면) 이 가장 작은 칸을 찾음 (= 한 단계 더 내다보기).
@@ -6,7 +6,8 @@
 //  결과(JSON, 표준 출력): 바꿀 장면 목록 {n, hk, obs[], cur, best, gain, p} 와 예상 절약(판당 클릭, 이 x쌍 기준)
 //  적용은 la_apply.js
 const fs=require('fs');const E=require('./eng.js'),P=require('./pol.js'),build=require('./ovmap.js');
-const x=+process.argv[2],FR=+(process.argv[3]||0.9),N0=+(process.argv[4]||4),N1=+(process.argv[5]||8);
+const x=+process.argv[process.argv.length-1],FR=+(process.env.LA_FR||0.9),N0=+(process.env.LA_N0||4),N1=+(process.env.LA_N1||8);
+if(![9,10,11,12,13,15,18,19,20].includes(x))throw new Error('x 쌍 번호: '+x);const PROG=require('./prog.js');
 const OV=build(__dirname,x);
 const pol=(st,L)=>{const k=E.hashKey(st,L);return OV.has(k)?OV.get(k):P.eng.decide(st,L)};
 const gl=st=>3-st.filter(v=>v==='gift').length;
@@ -24,11 +25,14 @@ for(let n=1;n<=N1;n++){const next=new Map();if(n>=N0)AT[n]=[...layer.values()];
  for(const s of layer.values()){if(gl(s.st)<=0||s.L.length<=1)continue;const t=pol(s.st,s.L);const gs=P.split(s.st,s.L,t);let W=0;for(const g of gs)W+=g.w;
   for(const g of gs){if(gl(g.s)<=0||g.ls.length<=1)continue;const k=E.hashKey(g.s,g.ls),q=next.get(k);if(q)q.p+=s.p*g.w/W;else next.set(k,{st:g.s,L:g.ls,p:s.p*g.w/W})}}
  layer=next}
-const t0=Date.now();const vRoot=V(st0,L0);const msRoot=Date.now()-t0;
+// 고를 장면 수(진행률용)
+const SEL={};let NSEL=0,DONE=0;for(let n=N0;n<=N1;n++){const all=AT[n].filter(s=>gl(s.st)>0&&s.L.length>1).sort((a,b)=>b.p-a.p);const tot=all.reduce((a,s)=>a+s.p,0);let acc=0;const pick=[];
+ for(const s of all){if(FR<1&&acc>=FR*tot)break;acc+=s.p;pick.push(s)}SEL[n]={all,tot,pick,acc};NSEL+=pick.length}
+const t0=Date.now();const vRoot=V(st0,L0);const msRoot=Date.now()-t0;PROG(0.05,true);
 const out={x,FR,N0,N1,vRoot,msRoot,depth:{},changes:[]};let save=0;
-for(let n=N0;n<=N1;n++){const all=AT[n].filter(s=>gl(s.st)>0&&s.L.length>1).sort((a,b)=>b.p-a.p);const tot=all.reduce((a,s)=>a+s.p,0);
- let acc=0,cnt=0,inLog=0,ch=0,ms=0;const t1=Date.now();
- for(const s of all){if(acc>=FR*tot)break;acc+=s.p;cnt++;const hk=E.hashKey(s.st,s.L),obs=LOGS[n].get(hk);if(!obs)continue;inLog++;
+for(let n=N0;n<=N1;n++){const{all,tot,pick,acc}=SEL[n];
+ let cnt=0,inLog=0,ch=0,ms=0;const t1=Date.now();
+ for(const s of pick){cnt++;DONE++;PROG(0.05+0.95*DONE/NSEL);const hk=E.hashKey(s.st,s.L),obs=LOGS[n].get(hk);if(!obs)continue;inLog++;
   const a=pol(s.st,s.L),qa=Q(s.st,s.L,a);let best=qa,bt=a;
   for(let t=0;t<42;t++)if(s.st[t]==='hidden'&&t!==a){const q=Q(s.st,s.L,t,best);if(q<best-1e-9){best=q;bt=t}}
   if(bt!==a){ch++;save+=s.p*(qa-best);out.changes.push({n,hk,obs,cur:a,best:bt,gain:qa-best,p:s.p})}}

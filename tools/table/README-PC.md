@@ -89,6 +89,21 @@ JOBS=6 tools/table/master.sh       # 동시에 돌릴 계산 수를 줄이기(PC
 `tools/table/cmp/c.*.json`(9쌍 비교), `tools/table/verify/out/`(검증 출력, `summary.json`).
 되돌리려면 `git checkout -- js/ tools/table/records.txt tools/table/verify/` 후 `tools/table/clean.sh`.
 
+## 3. 탐색 강화 (마지막에 한 번)
+
+`master.sh`가 검증을 통과해 main에 머지된 **뒤에** 실행합니다. 4~8번째 수에 나오는 장면마다 "지금 표대로 끝까지 갔을 때의 정확한 기대 클릭"을 기준으로 한 단계 더 내다봐 더 좋은 칸이 있으면 표를 바꿉니다(정책 개선이라 모델 기준 평균은 줄거나 같음). 기대 효과는 판당 약 0.02~0.03클릭입니다.
+
+```bash
+cd /e/GitHub/decoder-helper
+tools/table/la.sh            # 4~8번째 수 장면 전부, 검증 4b는 4만판
+tools/table/la.sh --fr 0.9   # 수마다 도달 확률 90%까지의 장면만 (빠름)
+```
+
+- 순서: 9쌍 계산(`la.js`, 진행률 1%마다 한 줄) → 표 다시 쓰기(`la_apply.js`) → 9쌍 비교 → 검증 5개(이전 버전 = 지금 main) → 통과하면 Enter로 머지.
+- 중간에 멈추면 다시 실행하면 끝난 쌍은 건너뜁니다. 처음부터 하려면 `tools/table/la` 폴더를 지우고 실행.
+- **자료(records.txt)를 바꿔 master.sh를 다시 돌리면 탐색 강화도 다시 해야 합니다**(master.sh가 표를 새로 만들기 때문). 그래서 자료가 확정된 뒤 마지막에 합니다.
+- 검증에 실패하면 머지하지 않습니다. 효과가 작아 4b(유의하게 나음)를 못 넘을 수 있습니다. 그때는 `git checkout -- js/tables.js`로 되돌리면 됩니다.
+
 ## 자주 생기는 문제
 
 - `node: command not found` → Node.js 설치 후 Git Bash를 새로 열기.
