@@ -8,3 +8,4 @@ master.log
 baseline.next.json
 records.new.txt
 node_modules/
+master.pid
