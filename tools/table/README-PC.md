@@ -46,7 +46,7 @@ tools/table/master.sh
 | 3 | `records.txt` 저장 → `verify/records.json`·`verify/kibo.txt` 다시 만듦 → `fitmodel.js --write`로 `js/prior.js` 갱신 | — |
 | 4 | OPENX1~3 → 4 → 5 → 6 … 13 계산. 단계마다 9쌍을 동시에 계산(기본 min(9, CPU 스레드 수)) | — |
 | 5 | 표를 `js/tables.js`에 쓰고 지금 기준(`baseline.json`)과 9쌍 비교 | — |
-| 6 | `verify/README.md`의 4가지 확인을 자동 실행하고 통과/실패 요약 | — |
+| 6 | `verify/README.md`의 4가지 확인을 자동 실행하고 통과/실패 요약 (4a 실제 기록 재생: 유의하게 나쁘지 않음 z < 2, 4b 모델 분포 2만판: 유의하게 나음 z < −1.96; 약 20~25분) | — |
 | 7 | 모두 통과하면 결과를 커밋하고 main에 fast-forward 머지 + push | **Enter** |
 
 실행 중 화면(같은 내용이 `tools/table/master.log`에도 남음):
@@ -72,7 +72,7 @@ OPEN 4 진행중
 ```bash
 tools/table/master.sh --yes        # y/n 묻지 않음
 tools/table/master.sh --no-fetch   # 시트에서 받지 않고 지금 records.txt 사용
-tools/table/master.sh --merge      # 검증 통과 뒤 Enter를 못 눌렀을 때 머지만 다시
+tools/table/master.sh --merge      # 검증 통과 뒤 Enter를 못 눌렀을 때 머지만 다시 (--merge --yes 는 Enter 없이)
 JOBS=6 tools/table/master.sh       # 동시에 돌릴 계산 수를 줄이기(PC를 같이 쓸 때)
 ```
 

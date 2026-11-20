@@ -2,9 +2,9 @@
 # 시작 추천 표(OPENX1~13) 다시 만들기 — 판 기록 받기 → 모델 맞춤 → 9쌍 병렬 계산 → 검증 → (통과 시) main에 머지
 #
 #   tools/table/master.sh             처음부터 끝까지 (중간에 멈췄으면 끝난 단계는 건너뜀)
-#   tools/table/master.sh --yes       기록 확인(y/n)을 묻지 않음
+#   tools/table/master.sh --yes       기록 확인(y/n)과 머지 전 Enter를 묻지 않음
 #   tools/table/master.sh --no-fetch  시트에서 받지 않고 지금 records.txt 사용
-#   tools/table/master.sh --merge     검증을 통과한 결과를 main에 머지만 (verify/out/summary.json 필요)
+#   tools/table/master.sh --merge     검증을 통과한 결과를 main에 머지만 (verify/out/summary.json 필요, --yes면 Enter 없이)
 #   JOBS=6 tools/table/master.sh      동시에 돌릴 계산 수 (기본: min(9, CPU 스레드 수))
 #
 # 출력은 모두 tools/table/master.log에 남음. 터미널에서는 진행 줄("○○ 진행중 · N% 완료 ...") 한 줄을 덮어쓰고 단계 완료·실패 줄만 새 줄로(logtee.js).
@@ -41,7 +41,7 @@ merge(){
  git fetch -q origin main || { say "git fetch 실패"; return 1; }
  git merge-base --is-ancestor origin/main HEAD || { say "origin/main에 이 브랜치에 없는 커밋이 있어 fast-forward가 안 됩니다. 브랜치를 main 위로 옮긴 뒤 다시 하세요."; return 1; }
  echo
- if ! ask "모두 통과했습니다. Enter를 누르면 커밋하고 main에 fast-forward 머지 + push합니다 (취소: Ctrl+C) "; then
+ if [ $YES = 0 ] && ! ask "모두 통과했습니다. Enter를 누르면 커밋하고 main에 fast-forward 머지 + push합니다 (취소: Ctrl+C) "; then
   echo; say "입력이 없어 머지하지 않았습니다. 나중에: tools/table/master.sh --merge"; return 1; fi
  [ -f baseline.next.json ] && cp baseline.next.json baseline.json   # 다음 비교의 기준
  local N F files=(); N=$(grep -c . records.txt)
