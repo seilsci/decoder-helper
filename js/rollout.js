@@ -8,7 +8,7 @@
    밖으로 내보내는 것: rollRec(pw) 지금 화면 상태로 바로 계산(동기) / rollRecAsync(pw) 같은 계산을 웹 워커에서(화면이 멈추지 않음, 실패하면 동기 계산으로 대체)
    pw = 칸별 당첨 가중치(prior.js의 PF). 없으면 균등
    rollEngine()은 계산 본체: 전역을 쓰지 않으므로 그대로 문자열로 바꿔 워커에 넣음 */
-function rollEngine(NBR,TT,PW,SP){ /* NBR = 이웃 칸 목록(NB), TT = 트리플 표(T), PW = 칸별 당첨 가중치(42개, 없으면 균등), SP = [당첨 칸 사이 거리 1·2·3의 간격 계수, 좌우 한쪽 계수](없으면 1) → (상태 배열, 배치 번호 배열) => 추천 칸 */
+function rollEngine(NBR,TT,PW,SP){ /* NBR = 이웃 칸 목록(NB), TT = 트리플 표(T), PW = 칸별 당첨 가중치(42개, 없으면 균등), SP = [당첨 칸 사이 거리 1·2·3의 간격 계수, 좌우 한쪽 계수, 세 구역 계수, 기억 계수 κ, 기억한 당첨 세 칸 번호...](없으면 1) → (상태 배열, 배치 번호 배열) => 추천 칸 */
  const N=42,GIFTS=3,imul=Math.imul;
  const bitLo=i=>(i<32?(1<<i)>>>0:0),bitHi=i=>(i>=32?1<<(i-32):0);
  /* 트리플 표: algorithm.js의 T와 같은 순서(a<b<c) → 번호 k가 T[k]와 같음 */
@@ -19,7 +19,12 @@ function rollEngine(NBR,TT,PW,SP){ /* NBR = 이웃 칸 목록(NB), TT = 트리�
  /* 좌우 한쪽 계수: 세 칸이 중앙선 왼쪽·오른쪽에 나뉘지 않으면 SP[3] (판 모양은 8,9,8,9,8 고정) */
  const SIDE=[8,9,8,9,8].flatMap((n,r)=>Array.from({length:n},(_,c)=>{const x=r%2?c:c+.5;return x<4?-1:x>4?1:0}));
  const sdf=(a,b,c)=>SP&&SP.length>3&&!((SIDE[a]<0||SIDE[b]<0||SIDE[c]<0)&&(SIDE[a]>0||SIDE[b]>0||SIDE[c]>0))?SP[3]:1;
- for(let k=0;k<NT;k++){const[a,b,c]=TT[k];T_LO[k]=(bitLo(a)|bitLo(b)|bitLo(c))>>>0;T_HI[k]=bitHi(a)|bitHi(b)|bitHi(c);TW[k]=(PW?PW[a]*PW[b]*PW[c]:1)*spf(a,b)*spf(a,c)*spf(b,c)*sdf(a,b,c)}
+ /* 세 구역 계수: 세 칸이 세로 세 구역(x ≤ 2.5 / 3~5 / ≥ 5.5)에 한 칸씩이면 SP[4] */
+ const ZONE=[8,9,8,9,8].flatMap((n,r)=>Array.from({length:n},(_,c)=>{const x=r%2?c:c+.5;return x<=2.5?0:x<5.5?1:2}));
+ const zdf=(a,b,c)=>SP&&SP.length>4&&ZONE[a]!==ZONE[b]&&ZONE[a]!==ZONE[c]&&ZONE[b]!==ZONE[c]?SP[4]:1;
+ for(let k=0;k<NT;k++){const[a,b,c]=TT[k];T_LO[k]=(bitLo(a)|bitLo(b)|bitLo(c))>>>0;T_HI[k]=bitHi(a)|bitHi(b)|bitHi(c);TW[k]=(PW?PW[a]*PW[b]*PW[c]:1)*spf(a,b)*spf(a,c)*spf(b,c)*sdf(a,b,c)*zdf(a,b,c)}
+ /* 이전 판 기억: 앞에서 나온 당첨 세 칸(SP[6]~)에 SP[5] × (배치 평균 가중치)를 더함 */
+ if(SP&&SP.length>6){let M=0;for(let k=0;k<NT;k++)M+=TW[k];M/=NT;for(let i=6;i<SP.length;i++)TW[SP[i]]+=SP[5]*M}
  const NB_LO=NBR.map(ns=>ns.reduce((m,i)=>(m|bitLo(i))>>>0,0)),NB_HI=NBR.map(ns=>ns.reduce((m,i)=>m|bitHi(i),0));
  const EPS=1e-12;
  /* 칸 상태: 'hidden' 닫힘 / 'x' / 'gift' 당첨 / 'warn' ! / 'open' 열림 */
@@ -101,7 +106,7 @@ function rollEngine(NBR,TT,PW,SP){ /* NBR = 이웃 칸 목록(NB), TT = 트리�
 /* 가중치(pw)별 계산기: pw가 없으면 균등. 보통 prior.js의 PF를 넘김. PF가 시트 값으로 바뀌면 새 계산기·새 워커를 만듦 */
 const rollEng=new Map();
 /* 간격 계수(prior.js의 PRIOR_SP)는 가중치(pw)를 넘길 때만 함께 씀: pw 없음 = 균등(간격 없음) */
-const rollSP=pw=>pw&&typeof PRIOR_SP!=='undefined'?Array.from(PRIOR_SP):null;
+const rollSP=pw=>pw&&typeof PRIOR_SP!=='undefined'?Array.from(PRIOR_SP).concat(typeof PRIOR_SEEN!=='undefined'&&PRIOR_SEEN.length&&PRIOR_SP.length>4?[PRIOR_MEM,...PRIOR_SEEN]:[]):null;
 const rollKey=pw=>pw?Array.prototype.join.call(pw,',')+'|'+(rollSP(pw)||[]).join(','):'u';
 function rollDecideFor(pw){const k=rollKey(pw);let d=rollEng.get(k);
  if(!d){if(pw)for(const key of[...rollEng.keys()])if(key!=='u')rollEng.delete(key); /* 옛 가중치 계산기는 버림(메모리) */

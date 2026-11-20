@@ -3,12 +3,15 @@
 const E=require('./eng.js');
 const _pr=require('fs').readFileSync(require('path').join(__dirname,'../../js/prior.js'),'utf8');
 const _arr=n=>{const m=_pr.match(new RegExp('const '+n+'=(\\[[^\\]]*\\])'));if(!m)throw new Error('prior.js: '+n);return JSON.parse(m[1])};
-const PRIOR_CNT=_arr('PRIOR_CNT'),PRIOR_EXPO=_arr('PRIOR_EXPO'),PRIOR_U=_arr('PRIOR_U'),SP=_arr('PRIOR_SP');
+const PRIOR_CNT=_arr('PRIOR_CNT'),PRIOR_EXPO=_arr('PRIOR_EXPO'),PRIOR_U=_arr('PRIOR_U'),SP0=_arr('PRIOR_SP');
+// 기억(PRIOR_MEM, PRIOR_SEEN)이 있으면 rollout.js의 rollSP와 같이 [계수 5개, κ, 기억한 당첨 세 칸...]로 붙임
+const _mem=_pr.match(/const PRIOR_MEM=([^;]*);/),SEEN=/const PRIOR_SEEN=/.test(_pr)?_arr('PRIOR_SEEN'):[];
+const SP=SP0.length>4&&_mem&&SEEN.length?SP0.concat([+_mem[1]],SEEN):SP0;
 const RATE=PRIOR_CNT.map((c,i)=>c/PRIOR_EXPO[i]); // 실제 당첨률(평가용, 간격 계수와 함께 씀)
 const PF=PRIOR_U.map(Math.exp);
 const eng=E.makeEngine({PW:PF,SP});
-const TW=E.T.map(([a,b,c])=>PF[a]*PF[b]*PF[c]*E.spf(SP,a,b)*E.spf(SP,a,c)*E.spf(SP,b,c)*E.sdf(SP,a,b,c));
-const RTW=E.T.map(([a,b,c])=>RATE[a]*RATE[b]*RATE[c]*E.spf(SP,a,b)*E.spf(SP,a,c)*E.spf(SP,b,c)*E.sdf(SP,a,b,c)); // 실제 당첨률 × 간격·좌우 계수(평가용)
+const TW=E.weights(PF,SP);
+const RTW=E.weights(RATE,SP); // 실제 당첨률 × 간격·좌우·세 구역 계수 + 기억(평가용)
 const gl=st=>3-st.filter(s=>s==='gift').length;
 let nodes=0;const pm=new Map();
 function split(st,L,t){const ctx=E.ctxOf(st),wn=E.warnNb(t,ctx),bk=new Map();for(const k of L){const c=E.outcome(k,t,ctx,wn);let g=bk.get(c);if(!g)bk.set(c,g={c,ls:[],w:0});g.ls.push(k);g.w+=TW[k]}
