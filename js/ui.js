@@ -18,9 +18,23 @@ function track(){
  const clicks=S.obs.filter(o=>'bhf'.includes(o.k)&&!o.manual).length-S.n0; /* 화면 하단 카운트와 같은 값 */
  const secs=Math.round((Date.now()-S.t0)/1000);
  const lang=String((L[S.lang]&&L[S.lang].lang)||S.lang).replace(/[\t\r\n]/g,' ');
- const body=line+'\t'+clicks+'\t'+secs+'\t'+lang;
- try{fetch(REC_URL,{method:'POST',mode:'no-cors',body:body,keepalive:true})}catch(e){}
+ /* 추천대로만 눌렀다면 몇 번에 끝났는지(같은 x·당첨 칸으로 추천을 그대로 따라 다시 둠). 계산이 실패하면 빈 칸 */
+ setTimeout(()=>{let rc='';try{rc=recClicks(X,Y)}catch(e){console.error(e)}
+  const body=line+'\t'+clicks+'\t'+secs+'\t'+lang+'\t'+rc;
+  try{fetch(REC_URL,{method:'POST',mode:'no-cors',body:body,keepalive:true})}catch(e){}},50);
 }
+/* 같은 x 두 칸과 당첨 세 칸으로, 처음부터 추천 칸만 눌렀을 때의 클릭 수 (화면 하단 카운트와 같은 셈). 지금 판 상태 S는 건드리지 않음 */
+function recClicks(X,Y){
+ const keep=S;
+ try{
+  S={lang:keep.lang,mode:'play',tool:'x',xs:new Set(X),hs:new Set(),bs:new Set(),os:new Set(),fs:new Set(),obs:[],n0:0,cl:[],rec:null,sel:null,t0:0,sent:''};
+  const unf=()=>Y.filter(j=>!found().includes(j)),truth=i=>Y.includes(i)?'f':NB[i].some(j=>unf().includes(j))?'h':'b';
+  for(let g=0;found().length<3&&g<60;g++){let q;while((q=pend()).length)answer(NB[q[0]].some(j=>unf().includes(j)));if(found().length>=3)break;
+   const A=analyze(),sure=[];for(let i=0;i<42;i++)if(A.p[i]>=.999999)sure.push(i);
+   if(A.N&&sure.length==3-found().length){addObs(sure[0],'f');continue}
+   let r=openRec();if(r==null)r=deepRec();if(r<0||state(r)!='c')return '';addObs(r,truth(r))}
+  return found().length>=3?clicks():''}
+ finally{S=keep}}
  
 
 function load(){
