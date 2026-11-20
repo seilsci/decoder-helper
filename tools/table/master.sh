@@ -7,7 +7,8 @@
 #   tools/table/master.sh --merge     검증을 통과한 결과를 main에 머지만 (verify/out/summary.json 필요)
 #   JOBS=6 tools/table/master.sh      동시에 돌릴 계산 수 (기본: min(9, CPU 스레드 수))
 #
-# 출력은 화면과 tools/table/master.log에 함께 남음.
+# 출력은 모두 tools/table/master.log에 남음. 터미널에서는 진행 줄("○○ 진행중 · N% 완료 ...") 한 줄을 덮어쓰고 단계 완료·실패 줄만 새 줄로(logtee.js).
+# 실행 중에는 master.pid가 있음(Claude Code 상태 줄 statusline.js가 봄).
 cd "$(dirname "$0")" || exit 1
 TB=$(pwd); ROOT=$(cd ../.. && pwd); R=$ROOT/js/tables.js
 YES=0; FETCH=1; MERGE_ONLY=0
@@ -17,13 +18,16 @@ for a in "$@"; do case $a in
  *) echo "모르는 옵션: $a (--help 참고)"; exit 1;; esac; done
 command -v node >/dev/null || { echo "node를 찾을 수 없습니다. tools/table/README-PC.md를 참고해 Node.js를 설치하세요."; exit 1; }
 command -v git >/dev/null || { echo "git을 찾을 수 없습니다."; exit 1; }
-exec > >(tee -a master.log) 2>&1
+TTYF=; [ -t 1 ] && TTYF=tty   # 터미널이면 진행 줄을 한 줄로 덮어씀
+exec > >(node logtee.js master.log $TTYF) 2>&1
 
 PAIRS="9 10 11 12 13 15 18 19 20"
 ok(){ [ -s "$1" ] && node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$1" 2>/dev/null; }
 allok(){ local p; for p in $PAIRS; do ok "$1.$p.json" || return 1; done; }
 say(){ echo "$*"; }
 now(){ date +%s; }
+# 질문은 터미널에 직접 띄움(진행 줄 필터를 거치지 않게). 터미널이 없으면 실패 = 아니오. 답은 REPLY
+ask(){ sleep 0.3; echo "$1" >> master.log; read -r -p "$1" REPLY 2>/dev/tty; }
 
 # ── main에 fast-forward 머지 + push ──
 merge(){
@@ -37,7 +41,7 @@ merge(){
  git fetch -q origin main || { say "git fetch 실패"; return 1; }
  git merge-base --is-ancestor origin/main HEAD || { say "origin/main에 이 브랜치에 없는 커밋이 있어 fast-forward가 안 됩니다. 브랜치를 main 위로 옮긴 뒤 다시 하세요."; return 1; }
  echo
- if ! read -r -p "모두 통과했습니다. Enter를 누르면 커밋하고 main에 fast-forward 머지 + push합니다 (취소: Ctrl+C) " _; then
+ if ! ask "모두 통과했습니다. Enter를 누르면 커밋하고 main에 fast-forward 머지 + push합니다 (취소: Ctrl+C) "; then
   echo; say "입력이 없어 머지하지 않았습니다. 나중에: tools/table/master.sh --merge"; return 1; fi
  [ -f baseline.next.json ] && cp baseline.next.json baseline.json   # 다음 비교의 기준
  local N F files=(); N=$(grep -c . records.txt)
@@ -50,6 +54,8 @@ merge(){
  say "main 머지·push 완료: $(git rev-parse --short HEAD)"
 }
 if [ $MERGE_ONLY = 1 ]; then merge; exit $?; fi
+# 실행 중 표시(Windows 프로세스 번호): 끝나면 지움
+echo "$(cat /proc/$$/winpid 2>/dev/null || echo $$)" > master.pid; trap 'rm -f master.pid' EXIT
 
 say "===== master.sh 시작 $(date '+%Y-%m-%d %H:%M') ====="
 # ── 1. 판 기록 받기 → 확인 → 모델 맞춤 ──
@@ -58,7 +64,7 @@ if [ $FETCH = 1 ]; then
  if [ $rc = 2 ]; then say "멈춤: 시트 prior 탭 I3의 판 수와 data 탭 A열 줄 수가 다릅니다. 시트를 확인한 뒤 다시 실행하세요."; exit 2; fi
  [ $rc = 0 ] || { say "멈춤: 판 기록 받기 실패"; exit $rc; }
  if [ $YES = 0 ]; then
-  read -r -p "이 기록으로 records.txt를 바꾸고 모델을 다시 맞출까요? (y/n) " ans || ans=n
+  ask "이 기록으로 records.txt를 바꾸고 모델을 다시 맞출까요? (y/n) " && ans=$REPLY || ans=n
   case $ans in y|Y|yes) ;; *) rm -f records.new.txt; say "취소했습니다. 아무것도 바꾸지 않았습니다."; exit 0;; esac
  fi
  mv -f records.new.txt records.txt
@@ -66,8 +72,8 @@ fi
 node mkrec.js || exit 1
 node fitmodel.js --write || exit 1
 
-# 모델이나 계산 코드가 지난번과 다르면 지난 결과를 지우고 처음부터
-STAMP=$(cat "$ROOT/js/prior.js" "$ROOT/js/rollout.js" "$ROOT/js/algorithm.js" eng.js pol.js gen2.js gen4.js gen5.js genN.js fixpair.js | sha1sum | cut -c1-16)
+# 모델이나 계산 코드가 지난번과 다르면 지난 결과를 지우고 처음부터 (진행 표시 줄(PROG)만 바뀐 것은 무시)
+STAMP=$(cat "$ROOT/js/prior.js" "$ROOT/js/rollout.js" "$ROOT/js/algorithm.js" eng.js pol.js gen2.js gen4.js gen5.js genN.js fixpair.js | tr -d '' | grep -v PROG | sha1sum | cut -c1-16)
 if [ -d out2 ] && [ "$(cat run.stamp 2>/dev/null)" != "$STAMP" ]; then say "모델 또는 계산 코드가 바뀌어 지난 계산 결과를 지우고 처음부터 계산합니다."; ./clean.sh >/dev/null; fi
 echo "$STAMP" > run.stamp
 [ -f drops.json ] || echo '{}' > drops.json
@@ -85,11 +91,12 @@ step(){ local s=$1 name=$2 pre=$3 t; shift 3
 }
 # fixdepth n — 기대 클릭이 늘어난 쌍은 손해 칸을 찾아 drops.json에 기록
 fixdepth(){ local n=$1 bad t
- bad=$(node -e 'const fs=require("fs");const b=[];for(const p of [9,10,11,12,13,15,18,19,20]){const d=JSON.parse(fs.readFileSync("out'$n'/g'$n'."+p+".json"));if(d.pf.gain<-1e-12||d.real.gain<-1e-12)b.push(p)}console.log(b.join(" "))')
+ bad=$(node -e 'const fs=require("fs");const b=[];for(const p of [9,10,11,12,13,15,18,19,20]){const d=JSON.parse(fs.readFileSync("out'$n'/g'$n'."+p+".json"));if(d.pf.gain<-1e-12||d.real.gain<-1e-12)b.push(p)}console.log(b.join(" "))') || { say "OPEN $n 손해 쌍 확인 실패"; exit 1; }
  t=$(now)
  if [ -n "$bad" ]; then say "  OPEN $n: 손해 쌍 [$bad] → 손해 칸 찾는 중"
   node runpar.js "f$n" "fx/fx.$n" "$bad" node fixpair.js "$n" || { say "fixpair $n 실패"; exit 1; }; fi
- node -e 'const fs=require("fs");const D=JSON.parse(fs.readFileSync("drops.json"));for(const f of fs.readdirSync("fx").filter(f=>f.startsWith("fx.'$n'."))){const r=JSON.parse(fs.readFileSync("fx/"+f));(D[r.n]=D[r.n]||{})[r.x]=r.drop;console.log("  고침",r.n,r.x,"뺀 칸",r.drop.length,"real",r.real.toFixed(5),"pf",r.pf.toFixed(5))}fs.writeFileSync("drops.json",JSON.stringify(D))'
+ # 이번 손해 쌍의 fixpair 결과(.json)만 drops.json에 합침 (.err 등은 제외)
+ node -e 'const fs=require("fs"),bad=process.argv[1].split(" ").filter(Boolean);const D=JSON.parse(fs.readFileSync("drops.json"));for(const f of bad.map(p=>"fx.'$n'."+p+".json")){const r=JSON.parse(fs.readFileSync("fx/"+f));(D[r.n]=D[r.n]||{})[r.x]=r.drop;console.log("  고침",r.n,r.x,"뺀 칸",r.drop.length,"real",r.real.toFixed(5),"pf",r.pf.toFixed(5))}fs.writeFileSync("drops.json",JSON.stringify(D))' "$bad" || { say "OPEN $n 손해 칸 기록 실패"; exit 1; }
  node progress.js done "f$n" $([ -n "$bad" ] && echo $(( $(now) - t )))
 }
 
