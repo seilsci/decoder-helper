@@ -24,6 +24,10 @@ function choose(){ // 앱 상태 → 2단 롤아웃 선택
  return bt}
 ctx.choose2=choose;ctx.PROG=require('./prog.js'); // 진행률(PROG 환경 변수)
 const only=process.argv[2]?process.argv[2].split(',').map(Number):null;
+// 진행률 = 처리한 상태 수 ÷ 이 쌍의 상태 수(지난 표 OPENX1~3의 키 수로 추정, 없으면 쌍당 14). 끝난 뒤 평가가 남으므로 0.95까지
+{const xs=only||[9,10,11,12,13,15,18,19,20];let tot=0;
+ try{for(const x of xs){const xk=x+','+(41-x);for(const n of['OPENX1','OPENX2','OPENX3'])tot+=Object.keys(vm.runInContext(n,ctx)).filter(k=>k===xk||k.startsWith(xk+'|')).length}}catch(e){tot=0}
+ if(!tot)tot=14*xs.length;let nd=0;const c0=ctx.choose2;ctx.choose2=()=>{const r=c0();ctx.PROG(.95*Math.min(.99,++nd/tot),true);return r}}
 const t0=Date.now();
 const out=vm.runInContext(`(function(only){
 const PAIRS=[[9,32],[10,31],[11,30],[12,29],[13,28],[15,26],[18,23],[19,22],[20,21]];
@@ -44,7 +48,7 @@ for(const xs of PAIRS){if(only&&!only.includes(xs[0]))continue;
    const q=pend();
    if(q.length){for(const h of[true,false]){const m=S.obs.length;answer(h);if(cands().length&&!pend().length)put(choose2());S.obs.length=m}}
    else put(choose2());
-   S.obs.length=n;PROG(.95*(j1+(j2+1)/O2.length)/O1.length)}
+   S.obs.length=n}
   S.obs.length=0}}
 return{T1,T2,T3}})`,ctx)(only);
 const vOld=P.polOv(new Map())(...START),vNew=P.polOv(OV)(...START);
