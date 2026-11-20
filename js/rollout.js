@@ -8,7 +8,7 @@
    밖으로 내보내는 것: rollRec(pw) 지금 화면 상태로 바로 계산(동기) / rollRecAsync(pw) 같은 계산을 웹 워커에서(화면이 멈추지 않음, 실패하면 동기 계산으로 대체)
    pw = 칸별 당첨 가중치(prior.js의 PF). 없으면 균등
    rollEngine()은 계산 본체: 전역을 쓰지 않으므로 그대로 문자열로 바꿔 워커에 넣음 */
-function rollEngine(NBR,TT,PW,SP){ /* NBR = 이웃 칸 목록(NB), TT = 트리플 표(T), PW = 칸별 당첨 가중치(42개, 없으면 균등), SP = 당첨 칸 사이 거리 1·2·3의 간격 계수(없으면 1) → (상태 배열, 배치 번호 배열) => 추천 칸 */
+function rollEngine(NBR,TT,PW,SP){ /* NBR = 이웃 칸 목록(NB), TT = 트리플 표(T), PW = 칸별 당첨 가중치(42개, 없으면 균등), SP = [당첨 칸 사이 거리 1·2·3의 간격 계수, 좌우 한쪽 계수](없으면 1) → (상태 배열, 배치 번호 배열) => 추천 칸 */
  const N=42,GIFTS=3,imul=Math.imul;
  const bitLo=i=>(i<32?(1<<i)>>>0:0),bitHi=i=>(i>=32?1<<(i-32):0);
  /* 트리플 표: algorithm.js의 T와 같은 순서(a<b<c) → 번호 k가 T[k]와 같음 */
@@ -16,7 +16,10 @@ function rollEngine(NBR,TT,PW,SP){ /* NBR = 이웃 칸 목록(NB), TT = 트리�
  const TW=new Float64Array(NT); /* 배치 가중치 = 세 칸 가중치의 곱 × 세 쌍의 간격 계수 (균등이면 모두 1) */
  const DST=NBR.map((_,s)=>{const d=new Array(N).fill(99);d[s]=0;const q=[s];while(q.length){const u=q.shift();for(const v of NBR[u])if(d[v]>d[u]+1){d[v]=d[u]+1;q.push(v)}}return d});
  const spf=(a,b)=>{const d=DST[a][b];return SP&&d>=1&&d<=3?SP[d-1]:1};
- for(let k=0;k<NT;k++){const[a,b,c]=TT[k];T_LO[k]=(bitLo(a)|bitLo(b)|bitLo(c))>>>0;T_HI[k]=bitHi(a)|bitHi(b)|bitHi(c);TW[k]=(PW?PW[a]*PW[b]*PW[c]:1)*spf(a,b)*spf(a,c)*spf(b,c)}
+ /* 좌우 한쪽 계수: 세 칸이 중앙선 왼쪽·오른쪽에 나뉘지 않으면 SP[3] (판 모양은 8,9,8,9,8 고정) */
+ const SIDE=[8,9,8,9,8].flatMap((n,r)=>Array.from({length:n},(_,c)=>{const x=r%2?c:c+.5;return x<4?-1:x>4?1:0}));
+ const sdf=(a,b,c)=>SP&&SP.length>3&&!((SIDE[a]<0||SIDE[b]<0||SIDE[c]<0)&&(SIDE[a]>0||SIDE[b]>0||SIDE[c]>0))?SP[3]:1;
+ for(let k=0;k<NT;k++){const[a,b,c]=TT[k];T_LO[k]=(bitLo(a)|bitLo(b)|bitLo(c))>>>0;T_HI[k]=bitHi(a)|bitHi(b)|bitHi(c);TW[k]=(PW?PW[a]*PW[b]*PW[c]:1)*spf(a,b)*spf(a,c)*spf(b,c)*sdf(a,b,c)}
  const NB_LO=NBR.map(ns=>ns.reduce((m,i)=>(m|bitLo(i))>>>0,0)),NB_HI=NBR.map(ns=>ns.reduce((m,i)=>m|bitHi(i),0));
  const EPS=1e-12;
  /* 칸 상태: 'hidden' 닫힘 / 'x' / 'gift' 당첨 / 'warn' ! / 'open' 열림 */

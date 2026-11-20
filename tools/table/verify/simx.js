@@ -1,6 +1,6 @@
 // x=6 모드 비교: node simx.js <A|B|U> <start> <count>
 //  A = 기존 x=6 (0.7 가중치 휴리스틱, 완전탐색 없음) / B = 롤아웃 + 같은 0.7 가중치(PF) / U = 롤아웃 균등(참고용)
-// 판 생성: ✕ = 실제 258판의 조합 빈도, 당첨 3칸 = 실제 칸별 당첨률(당첨 횟수/노출 판 수)의 곱에 비례
+// 판 생성: ✕ = 실제 기록(records.json xw)의 쌍별 빈도, 당첨 3칸 = 실제 칸별 당첨률(당첨 횟수/노출 판 수)의 곱에 비례
 const fs=require('fs'),vm=require('vm');const D=process.env.D||require('path').resolve(__dirname,'../../../js')+'/';
 const ctx={console,Math,Date,Set,Map,Array,Uint8Array,Uint32Array,Int32Array,Float64Array,JSON,Error,Infinity,Promise,setTimeout,location:{search:'?x=6'}};
 vm.createContext(ctx);for(const f of['tables.js','algorithm.js','rollout.js','prior.js'])vm.runInContext(fs.readFileSync(D+f,'utf8'),ctx,{filename:f});
@@ -8,7 +8,7 @@ ctx.YMODE=process.env.YMODE||'rate';ctx.REC_DATA=JSON.parse(fs.readFileSync(__di
 const [variant,start,count]=[process.argv[2],+process.argv[3],+process.argv[4]];
 vm.runInContext(`
 
-var PAIRS=[[9,32],[10,31],[11,30],[12,29],[13,28],[15,26],[18,23],[19,22],[20,21]],XW=[26,19,28,30,26,25,26,29,49];
+var PAIRS=[[9,32],[10,31],[11,30],[12,29],[13,28],[15,26],[18,23],[19,22],[20,21]],XW=REC_DATA.xw,XN=XW.reduce((a,b)=>a+b);
 var RATE=YMODE=='u'?REC_DATA.cnt.map(()=>1):YMODE=='pf'?Array.from(PF):REC_DATA.cnt.map((c,i)=>c/REC_DATA.ex[i]);
 var TRI={};function triFor(k){if(TRI[k])return TRI[k];const xs=PAIRS[k],ls=[],cum=[];let s=0;
  for(const t of T){if(t.some(i=>xs.includes(i)))continue;s+=RATE[t[0]]*RATE[t[1]]*RATE[t[2]];ls.push(t);cum.push(s)}return TRI[k]={ls,cum,s}}
@@ -17,7 +17,7 @@ function viaEngine(dec){const a=rollInput();return a?dec(a[0],a[1]):-1}
 var REC={C:()=>{const r=openRec();return r==null?deepRec():r},E:()=>{let r=openRec();if(r==null)r=deepRec();if(r>=0){const p=exPrep();const q=typeof p=='number'?p:exSeq(p);if(q>=0)r=q}return r},A:()=>deepRec(),B:()=>{const s=sureRec();return s>=0?s:viaEngine(decW)},U:()=>{const s=sureRec();return s>=0?s:viaEngine(decU)}};
 function game(g,variant){
  let s=(g*2654435761+12345)>>>0;const rnd=n=>{s=(Math.imul(s,1103515245)+12345)>>>0;return (s>>>8)%n};
- let r=rnd(258),k=0;while(r>=XW[k]){r-=XW[k];k++}
+ let r=rnd(XN),k=0;while(r>=XW[k]){r-=XW[k];k++}
  const xs=PAIRS[k],tr=triFor(k);const u=(rnd(1<<23)+rnd(1<<23)/(1<<23))/(1<<23)*tr.s;
  let lo=0,hi=tr.cum.length-1;while(lo<hi){const m=(lo+hi)>>1;if(tr.cum[m]<u)lo=m+1;else hi=m}const t=tr.ls[lo];
  S={lang:'ko',mode:'play',xs:new Set(xs),hs:new Set(),bs:new Set(),fs:new Set(),os:new Set(),obs:[],n0:0,cl:[]};

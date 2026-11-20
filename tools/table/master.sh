@@ -1,33 +1,124 @@
 #!/bin/bash
-# js/prior.js 가중치로 OPENX1~13 다시 계산 → 손해 칸 제거 → 기준선(baseline.json)과 판 전체 비교.
-# 단계별 결과가 있으면 건너뜀(중간에 멈추면 그대로 다시 실행). 새로 계산할 때는 먼저 ./clean.sh
-cd "$(dirname "$0")"; R=$(cd ../../js && pwd)/tables.js
-[ -f drops.json ] || echo '{}' > drops.json
-# 여섯 번째 수부터의 표(OPENX6~, OPENXD)가 남아 있으면 계산 중 앱이 옛 표를 따라가므로 먼저 떼어 냄
-node -e 'const fs=require("fs"),p=process.argv[1];let s=fs.readFileSync(p,"utf8");const i=s.indexOf("/* 여섯 번째 수부터의 표");if(i>=0){fs.writeFileSync(p,s.slice(0,i).replace(/\s*$/,"\n"));console.log("OPENX6+ block removed")}' $R || exit 1
+# 시작 추천 표(OPENX1~13) 다시 만들기 — 판 기록 받기 → 모델 맞춤 → 9쌍 병렬 계산 → 검증 → (통과 시) main에 머지
+#
+#   tools/table/master.sh             처음부터 끝까지 (중간에 멈췄으면 끝난 단계는 건너뜀)
+#   tools/table/master.sh --yes       기록 확인(y/n)을 묻지 않음
+#   tools/table/master.sh --no-fetch  시트에서 받지 않고 지금 records.txt 사용
+#   tools/table/master.sh --merge     검증을 통과한 결과를 main에 머지만 (verify/out/summary.json 필요)
+#   JOBS=6 tools/table/master.sh      동시에 돌릴 계산 수 (기본: min(9, CPU 스레드 수))
+#
+# 출력은 화면과 tools/table/master.log에 함께 남음.
+cd "$(dirname "$0")" || exit 1
+TB=$(pwd); ROOT=$(cd ../.. && pwd); R=$ROOT/js/tables.js
+YES=0; FETCH=1; MERGE_ONLY=0
+for a in "$@"; do case $a in
+ --yes|-y) YES=1;; --no-fetch) FETCH=0;; --merge) MERGE_ONLY=1;;
+ -h|--help) sed -n 2,10p "$0"; exit 0;;
+ *) echo "모르는 옵션: $a (--help 참고)"; exit 1;; esac; done
+command -v node >/dev/null || { echo "node를 찾을 수 없습니다. tools/table/README-PC.md를 참고해 Node.js를 설치하세요."; exit 1; }
+command -v git >/dev/null || { echo "git을 찾을 수 없습니다."; exit 1; }
+exec > >(tee -a master.log) 2>&1
+
 PAIRS="9 10 11 12 13 15 18 19 20"
-ok(){ [ -s "$1" ] && node -e "JSON.parse(require('fs').readFileSync('$1','utf8'))" 2>/dev/null; }
-run4(){ # $1 = 명령 접두, $2 = 출력 접두 (병렬 4개)
- for grp in "20 9" "13 10" "18 19" "11 12 15"; do (for p in $grp; do ok "$2.$p.json" || $1 $p > "$2.$p.json" 2> "$2.$p.err"; done) & done; wait; }
-log(){ echo "$(date +%H:%M) $*"; }
-mkdir -p out2; log "gen2 start"; run4 "node gen2.js" out2/g2
-for p in $PAIRS; do ok out2/g2.$p.json || { log "gen2 FAILED $p"; exit 1; }; done
-node -e 'const fs=require("fs");const N=[{},{},{}];for(const p of [9,10,11,12,13,15,18,19,20]){const d=JSON.parse(fs.readFileSync("out2/g2."+p+".json"));["T1","T2","T3"].forEach((k,i)=>Object.assign(N[i],d.tables[k]))}fs.writeFileSync("out2/tables2.json",JSON.stringify(N))'
-node puttab.js $R || exit 1; log "OPENX1-3 written"
-fixdepth(){ n=$1
+ok(){ [ -s "$1" ] && node -e 'JSON.parse(require("fs").readFileSync(process.argv[1],"utf8"))' "$1" 2>/dev/null; }
+allok(){ local p; for p in $PAIRS; do ok "$1.$p.json" || return 1; done; }
+say(){ echo "$*"; }
+now(){ date +%s; }
+
+# ── main에 fast-forward 머지 + push ──
+merge(){
+ node -e '
+  const fs=require("fs"),c=require("crypto"),h=f=>c.createHash("sha1").update(fs.readFileSync(f)).digest("hex");
+  let s;try{s=JSON.parse(fs.readFileSync("verify/out/summary.json","utf8"))}catch(e){console.log("검증 결과(verify/out/summary.json)가 없습니다.");process.exit(1)}
+  if(!s.pass){console.log("마지막 검증이 통과하지 못했습니다.");process.exit(1)}
+  if(s.hash.tables!==h("../../js/tables.js")||s.hash.prior!==h("../../js/prior.js")){console.log("검증 뒤에 tables.js 또는 prior.js가 바뀌었습니다. master.sh를 다시 실행하세요.");process.exit(1)}' || return 1
+ local BR; BR=$(git rev-parse --abbrev-ref HEAD)
+ [ "$BR" = main ] || [ "$BR" = HEAD ] && { say "작업 브랜치가 아닙니다($BR). 머지하지 않습니다."; return 1; }
+ git fetch -q origin main || { say "git fetch 실패"; return 1; }
+ git merge-base --is-ancestor origin/main HEAD || { say "origin/main에 이 브랜치에 없는 커밋이 있어 fast-forward가 안 됩니다. 브랜치를 main 위로 옮긴 뒤 다시 하세요."; return 1; }
+ echo
+ if ! read -r -p "모두 통과했습니다. Enter를 누르면 커밋하고 main에 fast-forward 머지 + push합니다 (취소: Ctrl+C) " _; then
+  echo; say "입력이 없어 머지하지 않았습니다. 나중에: tools/table/master.sh --merge"; return 1; fi
+ [ -f baseline.next.json ] && cp baseline.next.json baseline.json   # 다음 비교의 기준
+ local N F files=(); N=$(grep -c . records.txt)
+ for F in js/prior.js js/tables.js tools/table/records.txt tools/table/baseline.json tools/table/steptimes.json tools/table/verify/records.json tools/table/verify/kibo.txt; do [ -e "$ROOT/$F" ] && files+=("$F"); done
+ git -C "$ROOT" add -- "${files[@]}" || return 1
+ if ! git -C "$ROOT" diff --cached --quiet; then
+  git -C "$ROOT" commit -q -m "판 기록 ${N}판으로 당첨 모델과 시작 표(OPENX1-13) 다시 계산 (master.sh, 검증 통과)" || return 1; fi
+ git push origin "HEAD:$BR" && git push origin HEAD:main || { say "push 실패"; return 1; }
+ git fetch -q . HEAD:main 2>/dev/null || true   # 로컬 main도 같은 커밋으로
+ say "main 머지·push 완료: $(git rev-parse --short HEAD)"
+}
+if [ $MERGE_ONLY = 1 ]; then merge; exit $?; fi
+
+say "===== master.sh 시작 $(date '+%Y-%m-%d %H:%M') ====="
+# ── 1. 판 기록 받기 → 확인 → 모델 맞춤 ──
+if [ $FETCH = 1 ]; then
+ node fetch.js; rc=$?
+ if [ $rc = 2 ]; then say "멈춤: 시트 prior 탭 I3의 판 수와 data 탭 A열 줄 수가 다릅니다. 시트를 확인한 뒤 다시 실행하세요."; exit 2; fi
+ [ $rc = 0 ] || { say "멈춤: 판 기록 받기 실패"; exit $rc; }
+ if [ $YES = 0 ]; then
+  read -r -p "이 기록으로 records.txt를 바꾸고 모델을 다시 맞출까요? (y/n) " ans || ans=n
+  case $ans in y|Y|yes) ;; *) rm -f records.new.txt; say "취소했습니다. 아무것도 바꾸지 않았습니다."; exit 0;; esac
+ fi
+ mv -f records.new.txt records.txt
+fi
+node mkrec.js || exit 1
+node fitmodel.js --write || exit 1
+
+# 모델이나 계산 코드가 지난번과 다르면 지난 결과를 지우고 처음부터
+STAMP=$(cat "$ROOT/js/prior.js" "$ROOT/js/rollout.js" "$ROOT/js/algorithm.js" eng.js pol.js gen2.js gen4.js gen5.js genN.js fixpair.js | sha1sum | cut -c1-16)
+if [ -d out2 ] && [ "$(cat run.stamp 2>/dev/null)" != "$STAMP" ]; then say "모델 또는 계산 코드가 바뀌어 지난 계산 결과를 지우고 처음부터 계산합니다."; ./clean.sh >/dev/null; fi
+echo "$STAMP" > run.stamp
+[ -f drops.json ] || echo '{}' > drops.json
+mkdir -p prog fx cmp
+# 여섯 번째 수부터의 표(OPENX6~, OPENXD)가 남아 있으면 계산 중 앱이 옛 표를 따라가므로 먼저 떼어 냄
+node -e 'const fs=require("fs"),p=process.argv[1];let s=fs.readFileSync(p,"utf8");const i=s.indexOf("/* 여섯 번째 수부터의 표");if(i>=0){fs.writeFileSync(p,s.slice(0,i).replace(/\s*$/,"\n"))}' "$R" || exit 1
+
+node progress.js start
+# step <단계> <이름> <출력 접두> <명령...> — 9쌍 병렬 실행, 이미 다 있으면 건너뜀
+step(){ local s=$1 name=$2 pre=$3 t; shift 3
+ if allok "$pre"; then node progress.js done "$s"; return 0; fi
+ say "$name 진행중"; t=$(now)
+ node runpar.js "$s" "$pre" "$PAIRS" "$@" || { say "$name 실패 — 위 오류를 확인한 뒤 master.sh를 다시 실행하면 이어서 계산합니다."; exit 1; }
+ node progress.js done "$s" $(( $(now) - t ))
+}
+# fixdepth n — 기대 클릭이 늘어난 쌍은 손해 칸을 찾아 drops.json에 기록
+fixdepth(){ local n=$1 bad t
  bad=$(node -e 'const fs=require("fs");const b=[];for(const p of [9,10,11,12,13,15,18,19,20]){const d=JSON.parse(fs.readFileSync("out'$n'/g'$n'."+p+".json"));if(d.pf.gain<-1e-12||d.real.gain<-1e-12)b.push(p)}console.log(b.join(" "))')
- log "depth $n failing pairs: [$bad]"
- for p in $bad; do ok fx/fx.$n.$p.json || node fixpair.js $n $p > fx/fx.$n.$p.json; done
- node -e 'const fs=require("fs");const D=JSON.parse(fs.readFileSync("drops.json"));for(const f of fs.readdirSync("fx").filter(f=>f.startsWith("fx.'$n'."))){const r=JSON.parse(fs.readFileSync("fx/"+f));(D[r.n]=D[r.n]||{})[r.x]=r.drop;console.log("  fix",r.n,r.x,"drop",r.drop.length,"real",r.real.toFixed(5),"pf",r.pf.toFixed(5))}fs.writeFileSync("drops.json",JSON.stringify(D))'; }
-mkdir -p fx
-for n in 4 5; do mkdir -p out$n; log "gen$n start"; run4 "node gen$n.js" out$n/g$n
- for p in $PAIRS; do ok out$n/g$n.$p.json || { log "gen$n FAILED $p"; exit 1; }; done
- fixdepth $n; node put45.js $n $R || exit 1; done
-for n in 6 7 8 9 10 11 12 13; do mkdir -p out$n; log "genN $n start"; run4 "node genN.js $n" out$n/g$n
- for p in $PAIRS; do ok out$n/g$n.$p.json || { log "genN $n FAILED $p"; exit 1; }; done
- fixdepth $n; done
-node apply.js 13 $R || exit 1; log "OPENX6-13 written"
-mkdir -p cmp; rm -f cmp/c.*; run4 "node cmp.js" cmp/c
-node mkbase.js baseline.next.json
-log "FINAL"; cat cmp/c.*.json
+ t=$(now)
+ if [ -n "$bad" ]; then say "  OPEN $n: 손해 쌍 [$bad] → 손해 칸 찾는 중"
+  node runpar.js "f$n" "fx/fx.$n" "$bad" node fixpair.js "$n" || { say "fixpair $n 실패"; exit 1; }; fi
+ node -e 'const fs=require("fs");const D=JSON.parse(fs.readFileSync("drops.json"));for(const f of fs.readdirSync("fx").filter(f=>f.startsWith("fx.'$n'."))){const r=JSON.parse(fs.readFileSync("fx/"+f));(D[r.n]=D[r.n]||{})[r.x]=r.drop;console.log("  고침",r.n,r.x,"뺀 칸",r.drop.length,"real",r.real.toFixed(5),"pf",r.pf.toFixed(5))}fs.writeFileSync("drops.json",JSON.stringify(D))'
+ node progress.js done "f$n" $([ -n "$bad" ] && echo $(( $(now) - t )))
+}
+
+# ── 2. OPENX1~3 ──
+mkdir -p out2
+step g2 "OPEN 1-3" out2/g2 node gen2.js
+node -e 'const fs=require("fs");const N=[{},{},{}];for(const p of [9,10,11,12,13,15,18,19,20]){const d=JSON.parse(fs.readFileSync("out2/g2."+p+".json"));["T1","T2","T3"].forEach((k,i)=>Object.assign(N[i],d.tables[k]))}fs.writeFileSync("out2/tables2.json",JSON.stringify(N))'
+node puttab.js "$R" >/dev/null || exit 1; say "OPEN 1-3 완료"
+# ── 3. OPENX4, 5 ──
+for n in 4 5; do mkdir -p out$n
+ step g$n "OPEN $n" out$n/g$n node gen$n.js
+ fixdepth $n; node put45.js $n "$R" >/dev/null || exit 1; say "OPEN $n 완료"; done
+# ── 4. OPENX6~13 ──
+for n in 6 7 8 9 10 11 12 13; do mkdir -p out$n
+ step g$n "OPEN $n" out$n/g$n node genN.js $n
+ fixdepth $n; say "OPEN $n 완료"; done
+# ── 5. 표 쓰기 + 기준선과 비교 ──
+say "표 쓰기·비교 진행중"; t=$(now)
+node apply.js 13 "$R" || exit 1
+node -e 'const fs=require("fs"),p=process.argv[1],n=process.argv[2];fs.writeFileSync(p,fs.readFileSync(p,"utf8").replace(/(현재 표\(OPENX1~13\): )\d+판/,"$1"+n+"판"))' "$R" "$(grep -c . records.txt)"
+rm -f cmp/c.*; node runpar.js cmp cmp/c "$PAIRS" node cmp.js || { say "비교 실패"; exit 1; }
+node mkbase.js baseline.next.json || exit 1
+node progress.js done cmp $(( $(now) - t )); say "표 쓰기·비교 완료"
+# ── 6. 머지 전 4가지 확인 ──
+say "검증 진행중"; t=$(now)
+node verify/checkall.js; vrc=$?
+node progress.js done verify $(( $(now) - t )); say "검증 완료"
+node progress.js save >/dev/null
 echo MASTER_DONE
+[ $vrc = 0 ] || { say "검증에 실패한 항목이 있어 머지하지 않습니다."; exit 1; }
+# ── 7. 머지 ──
+merge

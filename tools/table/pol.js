@@ -7,8 +7,8 @@ const PRIOR_CNT=_arr('PRIOR_CNT'),PRIOR_EXPO=_arr('PRIOR_EXPO'),PRIOR_U=_arr('PR
 const RATE=PRIOR_CNT.map((c,i)=>c/PRIOR_EXPO[i]); // 실제 당첨률(평가용, 간격 계수와 함께 씀)
 const PF=PRIOR_U.map(Math.exp);
 const eng=E.makeEngine({PW:PF,SP});
-const TW=E.T.map(([a,b,c])=>PF[a]*PF[b]*PF[c]*E.spf(SP,a,b)*E.spf(SP,a,c)*E.spf(SP,b,c));
-const RTW=E.T.map(([a,b,c])=>RATE[a]*RATE[b]*RATE[c]*E.spf(SP,a,b)*E.spf(SP,a,c)*E.spf(SP,b,c)); // 실제 당첨률 × 간격(평가용)
+const TW=E.T.map(([a,b,c])=>PF[a]*PF[b]*PF[c]*E.spf(SP,a,b)*E.spf(SP,a,c)*E.spf(SP,b,c)*E.sdf(SP,a,b,c));
+const RTW=E.T.map(([a,b,c])=>RATE[a]*RATE[b]*RATE[c]*E.spf(SP,a,b)*E.spf(SP,a,c)*E.spf(SP,b,c)*E.sdf(SP,a,b,c)); // 실제 당첨률 × 간격·좌우 계수(평가용)
 const gl=st=>3-st.filter(s=>s==='gift').length;
 let nodes=0;const pm=new Map();
 function split(st,L,t){const ctx=E.ctxOf(st),wn=E.warnNb(t,ctx),bk=new Map();for(const k of L){const c=E.outcome(k,t,ctx,wn);let g=bk.get(c);if(!g)bk.set(c,g={c,ls:[],w:0});g.ls.push(k);g.w+=TW[k]}

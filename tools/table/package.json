@@ -1,0 +1,11 @@
+{
+  "name": "decoder-helper-table-tools",
+  "private": true,
+  "description": "시작 추천 표 계산·검증 도구 (화면 테스트용 playwright만 필요)",
+  "scripts": {
+    "master": "bash master.sh"
+  },
+  "devDependencies": {
+    "playwright": "^1.65.1"
+  }
+}

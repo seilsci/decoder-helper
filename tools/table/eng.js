@@ -6,6 +6,8 @@ const NB=C.map((a,i)=>C.map((_,j)=>j).filter(j=>{const b=C[j],dr=Math.abs(a.r-b.
 const T=[];for(let a=0;a<42;a++)for(let b=a+1;b<42;b++)for(let c=b+1;c<42;c++)T.push([a,b,c]);
 const DST=NB.map((_,s)=>{const d=new Array(N).fill(99);d[s]=0;const q=[s];while(q.length){const u=q.shift();for(const v of NB[u])if(d[v]>d[u]+1){d[v]=d[u]+1;q.push(v)}}return d});
 const spf=(SP,a,b)=>{const d=DST[a][b];return SP&&d>=1&&d<=3?SP[d-1]:1}; // 간격 계수
+const SIDE=[8,9,8,9,8].flatMap((n,r)=>Array.from({length:n},(_,c)=>{const x=r%2?c:c+.5;return x<4?-1:x>4?1:0}));
+const sdf=(SP,a,b,c)=>SP&&SP.length>3&&!((SIDE[a]<0||SIDE[b]<0||SIDE[c]<0)&&(SIDE[a]>0||SIDE[b]>0||SIDE[c]>0))?SP[3]:1; // 좌우 한쪽 계수
 const bitLo=i=>(i<32?(1<<i)>>>0:0),bitHi=i=>(i>=32?1<<(i-32):0);
 const NT=T.length,T_LO=new Uint32Array(NT),T_HI=new Uint32Array(NT);
 for(let k=0;k<NT;k++){const[a,b,c]=T[k];T_LO[k]=(bitLo(a)|bitLo(b)|bitLo(c))>>>0;T_HI[k]=bitHi(a)|bitHi(b)|bitHi(c)}
@@ -28,7 +30,7 @@ const SCORES={
  cur:(acc,W,g)=>{let ss=0;for(const a of acc)ss+=a*a;return g/W+(1-ss/(W*W))},
 };
 function makeEngine(o){
- const PW=o.PW,SP=o.SP||null,TW=new Float64Array(NT);for(let k=0;k<NT;k++){const[a,b,c]=T[k];TW[k]=(PW?PW[a]*PW[b]*PW[c]:1)*spf(SP,a,b)*spf(SP,a,c)*spf(SP,b,c)}
+ const PW=o.PW,SP=o.SP||null,TW=new Float64Array(NT);for(let k=0;k<NT;k++){const[a,b,c]=T[k];TW[k]=(PW?PW[a]*PW[b]*PW[c]:1)*spf(SP,a,b)*spf(SP,a,c)*spf(SP,b,c)*sdf(SP,a,b,c)}
  const score=o.score||SCORES.cur,TOPK=o.topK??6,DEEP=o.deep??2500,EPS=1e-12;
  function split(st,L,t,ctx){const wn=warnNb(t,ctx),bk=[];for(let i=0;i<L.length;i++){const k=L[i],c=outcome(k,t,ctx,wn);let g=bk[c];if(!g)bk[c]=g={code:c,ls:[],w:0};g.ls.push(k);g.w+=TW[k]}return bk.filter(g=>!!g)}
  function child(st,t,code,ctx){const s=st.slice();applyStates(s,t,code,warnNb(t,ctx));return s}
@@ -87,4 +89,4 @@ function makeEngine(o){
  /* 칸 t를 누른 뒤 최적으로 진행할 때의 값 */
  const qExact=(st,L,t)=>costAfter(st,L,t,exactValue);
  return{decide,baseExact,memo,exactValue,qExact,baseCost:(st,L)=>baseCost(st,L)}}
-module.exports={makeEngine,spf,SCORES,NB,T,N,ctxOf,warnNb,outcome,applyStates,hashKey};
+module.exports={makeEngine,spf,sdf,SCORES,NB,T,N,ctxOf,warnNb,outcome,applyStates,hashKey};

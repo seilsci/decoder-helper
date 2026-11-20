@@ -22,7 +22,7 @@ function choose(){ // 앱 상태 → 2단 롤아웃 선택
   if(pr)continue;const v=1+S/W;if(t===cur)vcur=v;if(v<best-1e-9){best=v;bt=t}}
  const hk=E.hashKey(st,L);if(!START)START=[st,L];OV.set(hk,bt);LOG.push({hk,obs:ctx.S.obs.map(o=>o.i+o.k+(o.k=='r'?(o.h?1:0):'')).join(','),L:L.length,cur,vcur,best:bt,vbest:best,gain:vcur-best});
  return bt}
-ctx.choose2=choose;
+ctx.choose2=choose;ctx.PROG=require('./prog.js'); // 진행률(PROG 환경 변수)
 const only=process.argv[2]?process.argv[2].split(',').map(Number):null;
 const t0=Date.now();
 const out=vm.runInContext(`(function(only){
@@ -38,13 +38,13 @@ const opts=i=>{const o=outcomes(i);return o?[...o]:[]};
 for(const xs of PAIRS){if(only&&!only.includes(xs[0]))continue;
  S={lang:'ko',mode:'play',xs:new Set(xs),hs:new Set(),bs:new Set(),fs:new Set(),os:new Set(),obs:[],n0:0,cl:[]};
  const r1=choose2();put(r1);
- for(const k1 of opts(r1)){addObs(r1,k1);
+ const O1=opts(r1);for(const[j1,k1]of O1.entries()){addObs(r1,k1);
   const r2=choose2();put(r2);
-  for(const k2 of opts(r2)){const n=S.obs.length;addObs(r2,k2);
+  const O2=opts(r2);for(const[j2,k2]of O2.entries()){const n=S.obs.length;addObs(r2,k2);
    const q=pend();
    if(q.length){for(const h of[true,false]){const m=S.obs.length;answer(h);if(cands().length&&!pend().length)put(choose2());S.obs.length=m}}
    else put(choose2());
-   S.obs.length=n}
+   S.obs.length=n;PROG(.95*(j1+(j2+1)/O2.length)/O1.length)}
   S.obs.length=0}}
 return{T1,T2,T3}})`,ctx)(only);
 const vOld=P.polOv(new Map())(...START),vNew=P.polOv(OV)(...START);

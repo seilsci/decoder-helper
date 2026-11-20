@@ -22,7 +22,7 @@ function choose(){ // 앱 상태 → 2단 롤아웃 선택
   if(pr)continue;const v=1+S/W;if(t===cur)vcur=v;if(v<best-1e-9){best=v;bt=t}}
  const hk=E.hashKey(st,L);if(!START)START=[st,L];OV.set(hk,bt);LOG.push({hk,obs:ctx.S.obs.map(o=>o.i+o.k+(o.k=='r'?(o.h?1:0):'')).join(','),L:L.length,cur,vcur,best:bt,vbest:best,gain:vcur-best});
  return bt}
-ctx.choose2=choose;
+ctx.choose2=choose;ctx.PROG=require('./prog.js'); // 진행률(PROG 환경 변수)
 const x=+process.argv[2];
 const t0=Date.now();
 const T4=vm.runInContext(`(function(x){
@@ -30,11 +30,11 @@ const xs=[x,41-x];S={lang:'ko',mode:'play',xs:new Set(xs),hs:new Set(),bs:new Se
 const T4={};const nClick=()=>S.obs.filter(o=>'bhf'.includes(o.k)).length;
 const key4=()=>[...S.xs].sort((a,b)=>a-b).join(',')+'|'+S.obs.map(o=>o.k=='r'?'r'+(o.h?1:0):o.i+'|'+o.k).join('|');
 const opts=i=>{const o=outcomes(i);return o?[...o]:[]};
-function walk(){if(found().length>=3||!cands().length)return;
- const q=pend();if(q.length){for(const h of[true,false]){const m=S.obs.length;answer(h);if(cands().length)walk();S.obs.length=m}return}
- if(nClick()==3){T4[key4()]=choose2();return}
+function walk(lo=0,hi=.9){if(found().length>=3||!cands().length){PROG(hi);return} // lo~hi = 이 가지가 맡은 진행률 구간
+ const q=pend();if(q.length){for(const h of[true,false]){const m=S.obs.length,md=(lo+hi)/2;answer(h);if(cands().length)walk(h?lo:md,h?md:hi);S.obs.length=m}PROG(hi);return}
+ if(nClick()==3){T4[key4()]=choose2();PROG(hi);return}
  let r=openRec();if(r==null){const s=sureRec();r=s>=0?s:rollRec(PF)}
- for(const k of opts(r)){const n=S.obs.length;addObs(r,k);walk();S.obs.length=n}}
+ const ks=opts(r);ks.forEach((k,j)=>{const n=S.obs.length;addObs(r,k);walk(lo+(hi-lo)*j/ks.length,lo+(hi-lo)*(j+1)/ks.length);S.obs.length=n})}
 walk();return T4})`,ctx)(x);
 const g2=JSON.parse(fs.readFileSync(__dirname+'/out2/g2.'+x+'.json'));const OV123=new Map(g2.log.map(l=>[l.hk,l.best]));
 const OV4=new Map(OV123);for(const l of LOG)OV4.set(l.hk,l.best);
