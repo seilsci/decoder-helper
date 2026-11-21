@@ -5,7 +5,7 @@ const ROWS=[8,9,8,9,8],C=[];ROWS.forEach((n,r)=>{for(let c=0;c<n;c++)C.push({r,x
 const NB=C.map((a,i)=>C.map((_,j)=>j).filter(j=>{const b=C[j],dr=Math.abs(a.r-b.r),dx=Math.abs(a.x-b.x);return j!=i&&((dr==0&&dx==1)||(dr==1&&dx==.5))}));
 const T=[];for(let a=0;a<42;a++)for(let b=a+1;b<42;b++)for(let c=b+1;c<42;c++)T.push([a,b,c]);
 const DST=NB.map((_,s)=>{const d=new Array(N).fill(99);d[s]=0;const q=[s];while(q.length){const u=q.shift();for(const v of NB[u])if(d[v]>d[u]+1){d[v]=d[u]+1;q.push(v)}}return d});
-const spf=(SP,a,b)=>{const d=DST[a][b];return SP&&d>=1&&d<=3?SP[d-1]:1}; // 간격 계수
+const spf=(SP,a,b)=>{const d=DST[a][b];return SP&&d>=1&&d<=3?SP[d-1]:SP&&(d===4||d===5)&&SP.length>6?SP[d+1]:1}; // 간격 계수(거리 4·5는 SP[5]·SP[6])
 const SIDE=[8,9,8,9,8].flatMap((n,r)=>Array.from({length:n},(_,c)=>{const x=r%2?c:c+.5;return x<4?-1:x>4?1:0}));
 const sdf=(SP,a,b,c)=>SP&&SP.length>3&&!((SIDE[a]<0||SIDE[b]<0||SIDE[c]<0)&&(SIDE[a]>0||SIDE[b]>0||SIDE[c]>0))?SP[3]:1; // 좌우 한쪽 계수
 const ZONE=[8,9,8,9,8].flatMap((n,r)=>Array.from({length:n},(_,c)=>{const x=r%2?c:c+.5;return x<=2.5?0:x<5.5?1:2}));
@@ -31,9 +31,9 @@ function hashKey(st,L){let h1=0x811c9dc5|0,h2=0x9747b28c|0;for(let i=0;i<N;i++){
 const SCORES={
  cur:(acc,W,g)=>{let ss=0;for(const a of acc)ss+=a*a;return g/W+(1-ss/(W*W))},
 };
-// 배치 가중치(rollout.js와 같은 계산): 칸 가중치 곱 × 간격·좌우·세 구역 계수, 그리고 기억한 당첨 세 칸(SP[6]~)에 SP[5] × 평균 가중치를 더함
+// 배치 가중치(rollout.js와 같은 계산): 칸 가중치 곱 × 간격·좌우·세 구역 계수, 그리고 기억한 당첨 세 칸(SP[8]~)에 SP[7] × 평균 가중치를 더함 (SP = 계수 7개 + [κ, 기억...])
 function weights(PW,SP){const TW=new Float64Array(NT);for(let k=0;k<NT;k++){const[a,b,c]=T[k];TW[k]=(PW?PW[a]*PW[b]*PW[c]:1)*spf(SP,a,b)*spf(SP,a,c)*spf(SP,b,c)*sdf(SP,a,b,c)*zdf(SP,a,b,c)}
- if(SP&&SP.length>6){let M=0;for(let k=0;k<NT;k++)M+=TW[k];M/=NT;for(let i=6;i<SP.length;i++)TW[SP[i]]+=SP[5]*M}return TW}
+ if(SP&&SP.length>8){let M=0;for(let k=0;k<NT;k++)M+=TW[k];M/=NT;for(let i=8;i<SP.length;i++)TW[SP[i]]+=SP[7]*M}return TW}
 function makeEngine(o){
  const PW=o.PW,SP=o.SP||null,TW=weights(PW,SP);
  const score=o.score||SCORES.cur,TOPK=o.topK??6,DEEP=o.deep??2500,EPS=1e-12;
