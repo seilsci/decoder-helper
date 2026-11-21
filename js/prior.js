@@ -6,7 +6,7 @@
 const PRIOR_CNT=[32,26,40,15,16,21,27,31,26,31,31,16,13,13,38,39,29,36,45,30,16,13,18,45,39,22,46,45,18,19,18,53,42,26,22,31,22,17,16,21,45,30];
 const PRIOR_EXPO=[393,393,393,393,393,393,393,393,393,350,358,347,351,358,393,354,393,393,355,351,320,320,351,355,393,393,354,393,358,351,347,358,350,393,393,393,393,393,393,393,393,393];
 /* 당첨 모델: P(당첨 세 칸 a,b,c) ∝ PF[a]·PF[b]·PF[c] · 간격 계수(a,b)·(a,c)·(b,c) · 좌우 한쪽 계수 · 세 구역 계수 (+ 이전 판 기억)
-   PRIOR_U = 칸별 로그 가중치(PF = exp(U)), PRIOR_SP = [두 당첨 칸 사이 거리 1·2·3칸의 간격 계수, 좌우 한쪽 계수, 세 구역 계수, 거리 4·5칸의 간격 계수(6칸 이상은 1), 네 구역 계수, 넓은 가운데 세 구역 계수].
+   PRIOR_U = 칸별 로그 가중치(PF = exp(U)), PRIOR_SP = [두 당첨 칸 사이 거리 1·2·3칸의 간격 계수, 좌우 한쪽 계수, 세 구역 계수, 거리 4·5칸의 간격 계수(6칸 이상은 1), 칸 번호 세 구역 계수(세 칸이 칸 번호 세 구역에 한 칸씩이면)].
    세 구역 계수: 세 칸이 세로 세 구역(x ≤ 2.5 / 3~5 / ≥ 5.5)에 한 칸씩이면 곱함(323판 교차검증 +28 nats).
    좌우 한쪽 계수: 세 칸이 세로 중앙선 왼쪽(x<4)과 오른쪽(x>4)에 나뉘지 않을 때 곱함(가운데 줄 칸은 어느 쪽도 아님). 실제로는 98.7%가 나뉨.
    실제 기록에서 당첨 칸끼리 붙어 있는 경우가 무작위의 약 절반이라 넣음. 두 값은 판 기록 전체로 tools/table/fitmodel.js가 계산(직접 고치지 않음).
@@ -25,15 +25,13 @@ const SPW=(function(){const D=NB.map((_,s)=>{const d=Array(42).fill(99);d[s]=0;c
 const SIDEOF=[8,9,8,9,8].flatMap((n,r)=>Array.from({length:n},(_,c)=>{const x=r%2?c:c+.5;return x<4?-1:x>4?1:0}));
 /* 칸의 세로 세 구역: 0 (x ≤ 2.5) / 1 (3~5) / 2 (x ≥ 5.5) */
 const ZONEOF=[8,9,8,9,8].flatMap((n,r)=>Array.from({length:n},(_,c)=>{const x=r%2?c:c+.5;return x<=2.5?0:x<5.5?1:2}));
-/* 네 구역(x<2 / 2~3.5 / 4~5.5 / ≥6)과 넓은 가운데 세 구역(x≤2 / 2.5~5.5 / ≥6) */
-const ZONE4OF=[8,9,8,9,8].flatMap((n,r)=>Array.from({length:n},(_,c)=>{const x=r%2?c:c+.5;return x<2?0:x<4?1:x<6?2:3}));
-const ZONEAOF=[8,9,8,9,8].flatMap((n,r)=>Array.from({length:n},(_,c)=>{const x=r%2?c:c+.5;return x<=2?0:x<6?1:2}));
-const DIF3=(Z,a,b,c)=>Z[a]!==Z[b]&&Z[a]!==Z[c]&&Z[b]!==Z[c];
+/* 칸 번호 세 구역: 줄마다 칸 번호(0부터) × 3 ÷ 그 줄의 칸 수를 내림 → 8칸 줄 000 111 22, 9칸 줄 000 111 222 (좌우 비대칭) */
+const ZONEIOF=[8,9,8,9,8].flatMap((n,r)=>Array.from({length:n},(_,c)=>Math.floor(c*3/n)));
 /* 기억 없이 계산한 배치 가중치: 칸 가중치 곱 × 간격 계수 × 좌우 한쪽 계수 × 세 구역 계수 */
 function triW0(t){const[a,b,c]=t,sp=PRIOR_SP.length>3&&!((SIDEOF[a]<0||SIDEOF[b]<0||SIDEOF[c]<0)&&(SIDEOF[a]>0||SIDEOF[b]>0||SIDEOF[c]>0))?PRIOR_SP[3]:1;
  const zp=PRIOR_SP.length>4&&ZONEOF[a]!==ZONEOF[b]&&ZONEOF[a]!==ZONEOF[c]&&ZONEOF[b]!==ZONEOF[c]?PRIOR_SP[4]:1;
- const z4=PRIOR_SP.length>7&&DIF3(ZONE4OF,a,b,c)?PRIOR_SP[7]:1,za=PRIOR_SP.length>8&&DIF3(ZONEAOF,a,b,c)?PRIOR_SP[8]:1;
- return PF[a]*PF[b]*PF[c]*SPW[a*42+b]*SPW[a*42+c]*SPW[b*42+c]*sp*zp*z4*za}
+ const zi=PRIOR_SP.length>7&&ZONEIOF[a]!==ZONEIOF[b]&&ZONEIOF[a]!==ZONEIOF[c]&&ZONEIOF[b]!==ZONEIOF[c]?PRIOR_SP[7]:1;
+ return PF[a]*PF[b]*PF[c]*SPW[a*42+b]*SPW[a*42+c]*SPW[b*42+c]*sp*zp*zi}
 /* 기억 더하기: 트리플 "a,b,c" → 더할 값 (rollout.js의 rollEngine과 같은 계산) */
 const MEMADD=(function(){const m=new Map();if(!(PRIOR_SP.length>4&&PRIOR_SEEN.length&&PRIOR_MEM))return m;
  let M=0;for(const t of T)M+=triW0(t);M/=T.length;for(const k of PRIOR_SEEN)m.set(T[k].join(','),PRIOR_MEM*M);return m})();
