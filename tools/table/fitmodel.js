@@ -9,6 +9,7 @@
 //   κ는 시간 순 우도(각 판은 그 앞의 판들만 기억)로 맞춤. 판 목록이 정해져 있다는 가설(같은 당첨 세 칸 반복이 무작위의 2.5배).
 // u에는 0쪽으로 당기는 벌점(LAM)을 둠. 300판 3겹 교차검증에서 LAM 3이 가장 좋았음(10과 거의 같고 30은 나쁨).
 // --write: js/prior.js의 PRIOR_CNT / PRIOR_EXPO / PRIOR_U / PRIOR_SP / PRIOR_SEEN / PRIOR_MEM 줄을 새 값으로 바꿈
+// --nosym: 대칭 늘리기 끄기(아래 설명)
 // --cv [K]: K겹 교차검증(기본 3, 판 번호 % K로 나눔). 처음 보는 판의 당첨 세 칸 로그우도를 모델별로 비교
 const fs=require('fs'),path=require('path');
 const LAM=3,ITER=3000,TOL=1e-9;
@@ -28,6 +29,11 @@ const G=fs.readFileSync(file,'utf8').split('\n').map(l=>l.trim()).filter(Boolean
  const xs=[idx(m[1]),idx(m[2])],ys=[idx(m[3]),idx(m[4]),idx(m[5])].sort((a,b)=>a-b);
  if(xs[0]+xs[1]!==41)throw new Error((n+1)+'번째 줄: ✕ 두 칸이 점대칭이 아님');if(new Set(ys).size<3||ys.some(y=>xs.includes(y)))throw new Error((n+1)+'번째 줄: 당첨 칸 이상');
  return{L:Int32Array.from(T.map((t,k)=>k).filter(k=>!T[k].some(i=>xs.includes(i)))),y:T.findIndex(t=>t[0]==ys[0]&&t[1]==ys[1]&&t[2]==ys[2]),xs,ys}});
+// 대칭 늘리기(기본 켜짐, --nosym으로 끔): 판마다 위아래·좌우·점대칭으로 뒤집은 판 3개를 더해 칸 가중치·계수(u, SP)를 맞춤.
+//   391판 기준 5겹 교차검증 +0.052 nats/판, 최근 58판·28판 시험에서도 모두 나음(늘리지 않은 원자료가 가장 나빴음). 기억(κ, PRIOR_SEEN)은 원래 판으로만
+const mkG=(xs,ys)=>{ys=ys.slice().sort((a,b)=>a-b);return{L:Int32Array.from(T.map((t,k)=>k).filter(k=>!T[k].some(i=>xs.includes(i)))),y:T.findIndex(t=>t[0]==ys[0]&&t[1]==ys[1]&&t[2]==ys[2]),xs,ys}};
+const cellAt=(r,x)=>C.findIndex(c=>c.r===r&&c.x===x),FL=[i=>cellAt(4-C[i].r,C[i].x),i=>cellAt(C[i].r,8-C[i].x)];FL.push(i=>FL[0](FL[1](i)));
+const SYM=!args.includes('--nosym'),GF=SYM?G.concat(...FL.map(f=>G.map(g=>mkG(g.xs.map(f),g.ys.map(f))))):G;
 // on = 쓰는 특징(0/1 4개). 꺼진 특징의 계수는 0(곱하는 값 1)으로 고정
 function pass(G,u,lt,on){let s=0;const gu=new Float64Array(42),gt=new Float64Array(NF);
  for(const{L,y}of G){let Z=0;const eu=new Float64Array(42),et=new Float64Array(NF);
@@ -67,11 +73,11 @@ if(args.includes('--cv')){const K=+args[args.indexOf('--cv')+1]||3;
  for(const kp of[0.5,1,2,4,8]){let d=0;for(let f=0;f<K;f++){const tr=G.filter((_,i)=>i%K!==f),m=fit(tr,[1,1,1,1,1]);G.forEach((g,i)=>{if(i%K===f)d+=memLL(g,i,m.u,m.lt,kp)-memLL(g,i,m.u,m.lt,0)})}
   console.log(`  +기억 κ=${kp}`.padEnd(12)+` ${(d+res['+세구역']-res['균등']).toFixed(2).padStart(8)} nats  (세구역 대비 ${d>=0?'+':''}${d.toFixed(2)})`)}
  process.exit(0)}
-const m=fit(G,[1,1,1,1,1]);
+const m=fit(GF,[1,1,1,1,1]);
 const U=Array.from(m.u,v=>+v.toFixed(5)),SP=Array.from(m.lt,v=>+Math.exp(v).toFixed(5));
 const MK=fitKappa(m.u,m.lt),SEEN=[...new Set(G.map(g=>g.y))].sort((a,b)=>a-b);
 const cnt=Array(42).fill(0),ex=Array(42).fill(0);for(const{xs,ys}of G){for(let i=0;i<42;i++)if(!xs.includes(i))ex[i]++;for(const y of ys)cnt[y]++}
-console.log(JSON.stringify({games:G.length,iter:m.it,obj:+m.obj.toFixed(4),mem:{kappa:MK.kappa,gainNats:MK.gain,seen:SEEN.length},split:{real:+realSplit.toFixed(4),model:+splitRate(G,m.u,m.lt).toFixed(4)},SP,U}));
+console.log(JSON.stringify({games:G.length,sym:SYM,iter:m.it,obj:+m.obj.toFixed(4),mem:{kappa:MK.kappa,gainNats:MK.gain,seen:SEEN.length},split:{real:+realSplit.toFixed(4),model:+splitRate(G,m.u,m.lt).toFixed(4)},SP,U}));
 if(args.includes('--write')){const pf=path.join(__dirname,'../../js/prior.js');let s=fs.readFileSync(pf,'utf8');
  const rep=(name,val)=>{const re=new RegExp('const '+name+'=\\[[^\\]]*\\];');if(!re.test(s))throw new Error('prior.js: '+name);s=s.replace(re,'const '+name+'='+JSON.stringify(val)+';')};
  rep('PRIOR_CNT',cnt);rep('PRIOR_EXPO',ex);rep('PRIOR_U',U);rep('PRIOR_SP',SP);rep('PRIOR_SEEN',SEEN);
