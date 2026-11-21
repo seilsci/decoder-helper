@@ -5,7 +5,8 @@
 //   q = 좌우 한쪽 계수: 세 칸이 세로 중앙선(가운데 칸 x=4) 기준으로 왼쪽(x<4)과 오른쪽(x>4)에 나뉘지 않을 때 곱하는 값
 //   z = 세 구역 계수: 세 칸이 세로 세 구역(x ≤ 2.5 / 3~5 / ≥ 5.5)에 한 칸씩 있을 때 곱하는 값
 //   s4, s5 = 두 당첨 칸 사이 거리 4·5의 간격 계수(6 이상은 1). 393판 대칭 학습 5겹 교차검증 +0.013 nats/판, 최근 58·28판 시험도 모두 나음
-//   → prior.js의 PRIOR_SP = [s1, s2, s3, q, z, s4, s5]
+//   z4 = 네 구역 계수, zA = 넓은 가운데 세 구역 계수 (412판 대칭 학습 5겹 교차검증 각각 +0.02~0.03 nats/판, 최근 58·28판 시험도 모두 나음)
+//   → prior.js의 PRIOR_SP = [s1, s2, s3, q, z, s4, s5, z4, zA] (끈 계수는 1)
 // 이전 판 기억: 앞에서 나온 당첨 세 칸(PRIOR_SEEN, 트리플 번호)에 κ × (전체 배치 평균 가중치)를 더함 → PRIOR_MEM = κ
 //   κ는 시간 순 우도(각 판은 그 앞의 판들만 기억)로 맞춤. 판 목록이 정해져 있다는 가설(같은 당첨 세 칸 반복이 무작위의 2.5배).
 // u에는 0쪽으로 당기는 벌점(LAM)을 둠. 300판 3겹 교차검증에서 LAM 3이 가장 좋았음(10과 거의 같고 30은 나쁨).
@@ -19,9 +20,11 @@ const NB=C.map((a,i)=>C.map((_,j)=>j).filter(j=>{const b=C[j],dr=Math.abs(a.r-b.
 const D=NB.map((_,s)=>{const d=Array(42).fill(99);d[s]=0;const q=[s];while(q.length){const u=q.shift();for(const v of NB[u])if(d[v]>d[u]+1){d[v]=d[u]+1;q.push(v)}}return d});
 const T=[];for(let a=0;a<42;a++)for(let b=a+1;b<42;b++)for(let c=b+1;c<42;c++)T.push([a,b,c]);
 // 특징 5개: 거리 1·2·3인 쌍의 수, 좌우 한쪽(나뉘지 않음)이면 1, 세 구역에 한 칸씩이면 1
-const NF=7,oneSide=t=>!(t.some(i=>C[i].x<4)&&t.some(i=>C[i].x>4));
+const NF=9,oneSide=t=>!(t.some(i=>C[i].x<4)&&t.some(i=>C[i].x>4));
 const ZONE=C.map(c=>c.x<=2.5?0:c.x<5.5?1:2),zone3=t=>new Set(t.map(i=>ZONE[i])).size===3;
-const NT=T.length,TF=new Int8Array(NT*NF);T.forEach((t,k)=>{const[a,b,c]=t;for(const d of[D[a][b],D[a][c],D[b][c]]){if(d<=3)TF[k*NF+d-1]++;else if(d<=5)TF[k*NF+d+1]++}TF[k*NF+3]=oneSide(t)?1:0;TF[k*NF+4]=zone3(t)?1:0});
+// 네 구역(x<2 / 2~3.5 / 4~5.5 / ≥6) 중 서로 다른 세 구역이면 z4, 넓은 가운데 세 구역(x≤2 / 2.5~5.5 / ≥6)에 한 칸씩이면 zA
+const Z4=C.map(c=>c.x<2?0:c.x<4?1:c.x<6?2:3),ZA=C.map(c=>c.x<=2?0:c.x<6?1:2),dif3=(Z,t)=>new Set(t.map(i=>Z[i])).size===3;
+const NT=T.length,TF=new Int8Array(NT*NF);T.forEach((t,k)=>{const[a,b,c]=t;for(const d of[D[a][b],D[a][c],D[b][c]]){if(d<=3)TF[k*NF+d-1]++;else if(d<=5)TF[k*NF+d+1]++}TF[k*NF+3]=oneSide(t)?1:0;TF[k*NF+4]=zone3(t)?1:0;TF[k*NF+7]=dif3(Z4,t)?1:0;TF[k*NF+8]=dif3(ZA,t)?1:0});
 const idx=s=>{const[r,c]=s.split('-').map(Number);if(!(r>=1&&r<=5&&c>=1&&c<=R[r-1]))throw new Error('칸 '+s);return ST[r-1]+c-1};
 const args=process.argv.slice(2);
 const file=args[0]&&!args[0].startsWith('--')?args[0]:path.join(__dirname,'records.txt');
@@ -61,7 +64,8 @@ const _bw=new Map();function memLL(g,i,u,lt,kp){let w=_bw.get(u);if(!w){w=baseW(
 function fitKappa(u,lt){let best=0,bv=-Infinity;for(let e=-3;e<=4.01;e+=0.05){const kp=Math.pow(2,e);let s=0;G.forEach((g,i)=>{s+=memLL(g,i,u,lt,kp)});if(s>bv){bv=s;best=kp}}
  let s0=0;G.forEach((g,i)=>{s0+=memLL(g,i,u,lt,0)});return{kappa:+best.toFixed(4),gain:+(bv-s0).toFixed(2)}}
 const realSplit=G.filter(g=>!TF[g.y*NF+3]).length/G.length;
-const MODELS={'균등':[0,0,0,0,0],'칸만':null,'칸+간격':[1,1,1,0,0],'칸+간격+좌우':[1,1,1,1,0],'+세구역':[1,1,1,1,1,0,0],'+거리4·5':[1,1,1,1,1,1,1]};
+const MODELS={'균등':[0,0,0,0,0],'칸만':null,'칸+간격':[1,1,1,0,0],'칸+간격+좌우':[1,1,1,1,0],'+세구역':[1,1,1,1,1,0,0],'+거리4·5':[1,1,1,1,1,1,1],'+네구역':[1,1,1,1,1,1,1,1,0],'+넓은가운데':[1,1,1,1,1,1,1,0,1],'+둘다':[1,1,1,1,1,1,1,1,1]};
+const ON=MODELS[process.env.ZMODEL||'+둘다']; // 실제로 쓰는 모델
 if(args.includes('--cv')){const K=+args[args.indexOf('--cv')+1]||3;
  console.log(`${G.length}판 ${K}겹 교차검증 — 처음 보는 판의 로그우도 합(클수록 좋음), 균등 대비 nats / 좌우 나뉨 확률(실제 ${(realSplit*100).toFixed(1)}%)`);
  const res={};for(const[name,on]of Object.entries(MODELS)){let ll=0;
@@ -71,10 +75,10 @@ if(args.includes('--cv')){const K=+args[args.indexOf('--cv')+1]||3;
   res[name]=ll;const m=name==='균등'?{u:new Float64Array(42),lt:new Float64Array(NF)}:fit(G,on||[0,0,0,0,0]);
   console.log(`  ${name.padEnd(8)} ${(ll-res['균등']).toFixed(2).padStart(8)} nats   좌우 나뉨 ${(splitRate(G,m.u,m.lt)*100).toFixed(1)}%`+(on&&on[3]?`   q=${Math.exp(m.lt[3]).toFixed(4)}`:'')+(on&&on[4]?`   z=${Math.exp(m.lt[4]).toFixed(4)}`:''))}
  // 기억 계수: 접기마다 학습 판으로 u·계수를 맞추고, 시험 판은 "그 판보다 앞선 모든 판"을 기억으로 씀
- for(const kp of[0.5,1,2,4,8]){let d=0;for(let f=0;f<K;f++){const tr=G.filter((_,i)=>i%K!==f),m=fit(tr,[1,1,1,1,1,1,1]);G.forEach((g,i)=>{if(i%K===f)d+=memLL(g,i,m.u,m.lt,kp)-memLL(g,i,m.u,m.lt,0)})}
+ for(const kp of[0.5,1,2,4,8]){let d=0;for(let f=0;f<K;f++){const tr=G.filter((_,i)=>i%K!==f),m=fit(tr,ON);G.forEach((g,i)=>{if(i%K===f)d+=memLL(g,i,m.u,m.lt,kp)-memLL(g,i,m.u,m.lt,0)})}
   console.log(`  +기억 κ=${kp}`.padEnd(12)+` ${(d+res['+거리4·5']-res['균등']).toFixed(2).padStart(8)} nats  (거리4·5 대비 ${d>=0?'+':''}${d.toFixed(2)})`)}
  process.exit(0)}
-const m=fit(GF,[1,1,1,1,1,1,1]);
+const m=fit(GF,ON);
 const U=Array.from(m.u,v=>+v.toFixed(5)),SP=Array.from(m.lt,v=>+Math.exp(v).toFixed(5));
 const MK=fitKappa(m.u,m.lt),SEEN=[...new Set(G.map(g=>g.y))].sort((a,b)=>a-b);
 const cnt=Array(42).fill(0),ex=Array(42).fill(0);for(const{xs,ys}of G){for(let i=0;i<42;i++)if(!xs.includes(i))ex[i]++;for(const y of ys)cnt[y]++}

@@ -4,9 +4,9 @@ const E=require('./eng.js');
 const _pr=require('fs').readFileSync(require('path').join(__dirname,'../../js/prior.js'),'utf8');
 const _arr=n=>{const m=_pr.match(new RegExp('const '+n+'=(\\[[^\\]]*\\])'));if(!m)throw new Error('prior.js: '+n);return JSON.parse(m[1])};
 const PRIOR_CNT=_arr('PRIOR_CNT'),PRIOR_EXPO=_arr('PRIOR_EXPO'),PRIOR_U=_arr('PRIOR_U'),SP0=_arr('PRIOR_SP');
-// 기억(PRIOR_MEM, PRIOR_SEEN)이 있으면 rollout.js의 rollSP와 같이 [계수 7개, κ, 기억한 당첨 세 칸...]로 붙임
+// 기억(PRIOR_MEM, PRIOR_SEEN)이 있으면 rollout.js의 rollSP와 같이 [계수 9개, κ, 기억한 당첨 세 칸...]로 붙임
 const _mem=_pr.match(/const PRIOR_MEM=([^;]*);/),SEEN=/const PRIOR_SEEN=/.test(_pr)?_arr('PRIOR_SEEN'):[];
-const SPH=SP0.slice(0,7);while(SPH.length<7)SPH.push(1); // 계수 7개(예전 5개짜리면 거리 4·5 계수 1)
+const SPH=SP0.slice(0,9);while(SPH.length<9)SPH.push(1); // 계수 9개(예전 5·7개짜리면 없는 계수는 1)
 const SP=SP0.length>4&&_mem&&SEEN.length?SPH.concat([+_mem[1]],SEEN):SPH;
 const RATE=PRIOR_CNT.map((c,i)=>c/PRIOR_EXPO[i]); // 실제 당첨률(평가용, 간격 계수와 함께 씀)
 const PF=PRIOR_U.map(Math.exp);
