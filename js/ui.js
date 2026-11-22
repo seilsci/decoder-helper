@@ -9,7 +9,7 @@ const LPG=18; /* 한 페이지 개수: 기존 언어 18개가 1페이지, 추가
 const REC_URL='https://script.google.com/macros/s/AKfycbw_6H2IjYti4RM224PFnpQDknAGaF9g0Rjkel9GvOr---5WEJZzPMIOpIhhqGJShp1QqA/exec';
 const REC_MIN_MS=10000;
 /* 기록에 함께 보내는 것: 사용 버전(학습 판 수-코드 날짜), 기기 ID(이 브라우저에 저장한 무작위 6자), IP 코드(IP를 해시한 짧은 값, IP 원본은 보내지 않음) */
-const APP_REV='1122'; /* 화면·기록 코드를 고칠 때 날짜(MMDD)로 바꿈 */
+const APP_REV='1123'; /* 화면·기록 코드를 고칠 때 날짜(MMDD)로 바꿈 */
 const APP_VER=(typeof PRIOR_EXPO!=='undefined'?Math.max(...PRIOR_EXPO):0)+'-'+APP_REV; /* 예: 481-1122 (master.sh가 모델을 다시 맞추면 앞 숫자가 자동으로 바뀜) */
 const DEV_ID=(()=>{try{let v=localStorage.getItem('dh_dev');if(!v){v=Math.random().toString(36).slice(2,8);localStorage.setItem('dh_dev',v)}return v}catch(e){return ''}})();
 let IP_CODE='';
@@ -32,7 +32,8 @@ function track(){
  /* 추천대로만 눌렀다면 몇 번에 끝났는지(같은 x·당첨 칸으로 추천을 그대로 따라 다시 둠). 계산이 실패하면 빈 칸 */
  setTimeout(()=>{let rc='';try{rc=recClicks(X,Y)}catch(e){console.error(e)}
   const body=line+'\t'+clicks+'\t'+secs+'\t'+lang+'\t'+rc+'\t'+APP_VER+'\t'+DEV_ID+'\t'+IP_CODE;
-  try{fetch(REC_URL,{method:'POST',mode:'no-cors',body:body,keepalive:true})}catch(e){}},50);
+  try{fetch(REC_URL,{method:'POST',mode:'no-cors',body:body,keepalive:true})}catch(e){}
+  if(typeof updTarget!=='undefined'&&updTarget)setTimeout(updApply,2500)},50);
 }
 /* 같은 x 두 칸과 당첨 세 칸으로, 처음부터 추천 칸만 눌렀을 때의 클릭 수 (화면 하단 카운트와 같은 셈). 지금 판 상태 S는 건드리지 않음 */
 function recClicks(X,Y){
@@ -257,4 +258,24 @@ document.addEventListener('input',e=>{if(e.target.id=='lq'){S.q=e.target.value;S
 function boot(){ /* 저장된 판이 있으면 이어서 시작 (! 질문이 남아 있으면 질문부터). 저장본 때문에 시작이 실패하면 저장본을 버리고 새로 시작 */
  try{restoreGame();render();if(S.mode=='play')go()}
  catch(e){console.error(e);try{localStorage.removeItem(SAVE_KEY)}catch(_){}const l=S.lang;init();S.lang=l;render()}}
+/* ── 새 버전 자동 적용: 서버의 prior.js·ui.js로 버전(APP_VER과 같은 방식)을 캐시 없이 확인 → 다르면 파일을 서버에서 다시 받아 브라우저 저장본을 덮어쓴 뒤 새로고침.
+   판 도중에는 하지 않음(판이 끝났거나 시작 전, 또는 화면이 가려졌을 때만). 같은 목표 버전으로는 한 번만 시도(서버 반영이 늦어도 무한 새로고침 없음) ── */
+const UPD_FILES=['./','index.html','js/lang.js','js/lang2.js','js/tables.js','js/algorithm.js','js/rollout.js','js/prior.js','js/ui.js'];
+let updTarget=null;
+async function serverVer(){
+ const get=async f=>{const r=await fetch(f+'?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error(f);return r.text()};
+ const[pj,uj]=await Promise.all([get('js/prior.js'),get('js/ui.js')]);
+ const m=pj.match(/const PRIOR_EXPO=(\[[^\]]*\])/),r=uj.match(/const APP_REV='([^']*)'/);
+ if(!m||!r)return null;return Math.max(...JSON.parse(m[1]))+'-'+r[1]}
+const updSafe=()=>document.visibilityState==='hidden'||!(S.mode==='play'&&S.obs.length>S.n0&&found().length<3);
+async function updApply(){
+ if(!updTarget||!updSafe())return;
+ try{if(sessionStorage.getItem('dh_upd')===updTarget)return;sessionStorage.setItem('dh_upd',updTarget)}catch(e){}
+ saveGame();
+ try{await Promise.all(UPD_FILES.map(f=>fetch(f,{cache:'reload'}).catch(()=>{})))}catch(e){}
+ location.reload()}
+async function updCheck(){
+ try{const v=await serverVer();if(v&&v!==APP_VER){updTarget=v;updApply()}}catch(e){}}
+setTimeout(updCheck,3000);setInterval(updCheck,10*60*1000);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')updCheck();else updApply()});
 boot();
