@@ -12,6 +12,8 @@ const ZONE=[8,9,8,9,8].flatMap((n,r)=>Array.from({length:n},(_,c)=>{const x=r%2?
 const zdf=(SP,a,b,c)=>SP&&SP.length>4&&ZONE[a]!==ZONE[b]&&ZONE[a]!==ZONE[c]&&ZONE[b]!==ZONE[c]?SP[4]:1; // 세 구역 계수
 const ZI=[8,9,8,9,8].flatMap((n,r)=>Array.from({length:n},(_,c)=>Math.floor(c*3/n))); // 칸 번호 세 구역(8칸 줄 000 111 22, 9칸 줄 000 111 222)
 const zif=(SP,a,b,c)=>SP&&SP.length>7&&ZI[a]!==ZI[b]&&ZI[a]!==ZI[c]&&ZI[b]!==ZI[c]?SP[7]:1; // 칸 번호 세 구역 계수 SP[7]
+const RW=[8,9,8,9,8].flatMap((n,r)=>Array(n).fill(r));
+const zrf=(SP,a,b,c)=>SP&&SP.length>8&&ZI[a]!==ZI[b]&&ZI[a]!==ZI[c]&&ZI[b]!==ZI[c]&&RW[a]!==RW[b]&&RW[a]!==RW[c]&&RW[b]!==RW[c]?SP[8]:1; // 세 줄 다름 계수 SP[8]
 const bitLo=i=>(i<32?(1<<i)>>>0:0),bitHi=i=>(i>=32?1<<(i-32):0);
 const NT=T.length,T_LO=new Uint32Array(NT),T_HI=new Uint32Array(NT);
 for(let k=0;k<NT;k++){const[a,b,c]=T[k];T_LO[k]=(bitLo(a)|bitLo(b)|bitLo(c))>>>0;T_HI[k]=bitHi(a)|bitHi(b)|bitHi(c)}
@@ -33,9 +35,9 @@ function hashKey(st,L){let h1=0x811c9dc5|0,h2=0x9747b28c|0;for(let i=0;i<N;i++){
 const SCORES={
  cur:(acc,W,g)=>{let ss=0;for(const a of acc)ss+=a*a;return g/W+(1-ss/(W*W))},
 };
-// 배치 가중치(rollout.js와 같은 계산): 칸 가중치 곱 × 간격·좌우·세 구역 계수, 그리고 기억한 당첨 세 칸(SP[9]~)에 SP[8] × 평균 가중치를 더함 (SP = 계수 8개 + [κ, 기억...])
-function weights(PW,SP){const TW=new Float64Array(NT);for(let k=0;k<NT;k++){const[a,b,c]=T[k];TW[k]=(PW?PW[a]*PW[b]*PW[c]:1)*spf(SP,a,b)*spf(SP,a,c)*spf(SP,b,c)*sdf(SP,a,b,c)*zdf(SP,a,b,c)*zif(SP,a,b,c)}
- if(SP&&SP.length>9){let M=0;for(let k=0;k<NT;k++)M+=TW[k];M/=NT;for(let i=9;i<SP.length;i++)TW[SP[i]]+=SP[8]*M}return TW}
+// 배치 가중치(rollout.js와 같은 계산): 칸 가중치 곱 × 간격·좌우·세 구역 계수, 그리고 기억한 당첨 세 칸(SP[10]~)에 SP[9] × 평균 가중치를 더함 (SP = 계수 9개 + [κ, 기억...])
+function weights(PW,SP){const TW=new Float64Array(NT);for(let k=0;k<NT;k++){const[a,b,c]=T[k];TW[k]=(PW?PW[a]*PW[b]*PW[c]:1)*spf(SP,a,b)*spf(SP,a,c)*spf(SP,b,c)*sdf(SP,a,b,c)*zdf(SP,a,b,c)*zif(SP,a,b,c)*zrf(SP,a,b,c)}
+ if(SP&&SP.length>10){let M=0;for(let k=0;k<NT;k++)M+=TW[k];M/=NT;for(let i=10;i<SP.length;i++)TW[SP[i]]+=SP[9]*M}return TW}
 function makeEngine(o){
  const PW=o.PW,SP=o.SP||null,TW=weights(PW,SP);
  const score=o.score||SCORES.cur,TOPK=o.topK??6,DEEP=o.deep??2500,EPS=1e-12;

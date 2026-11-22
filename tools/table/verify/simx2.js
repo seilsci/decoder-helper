@@ -5,14 +5,16 @@ const fs=require('fs'),vm=require('vm');const D=process.env.D||require('path').r
 const ctx={console,Math,Date,Set,Map,Array,Uint8Array,Uint32Array,Int32Array,Float64Array,JSON,Error,Infinity,Promise,setTimeout,location:{search:'?x=6'}};
 vm.createContext(ctx);for(const f of['tables.js','algorithm.js','rollout.js','prior.js'])vm.runInContext(fs.readFileSync(D+f,'utf8'),ctx,{filename:f});
 ctx.YMODE=process.env.YMODE||'rate';
-{const t=vm.createContext({console,Math,Set,Map,Array,Float64Array,JSON,location:{search:''}});for(const f of['algorithm.js','prior.js'])vm.runInContext(fs.readFileSync(require('path').resolve(__dirname,'../../../js')+'/'+f,'utf8'),t);ctx.TRUTHW=vm.runInContext('T.map(triW)',t)}ctx.REC_DATA=JSON.parse(fs.readFileSync(__dirname+'/records.json','utf8'));
+{const t=vm.createContext({console,Math,Set,Map,Array,Float64Array,JSON,location:{search:''}});for(const f of['algorithm.js','prior.js'])vm.runInContext(fs.readFileSync(require('path').resolve(__dirname,'../../../js')+'/'+f,'utf8'),t);ctx.TRUTHW=vm.runInContext('T.map(triW)',t);ctx.TRUTHXW=vm.runInContext("typeof PRIOR_XW!='undefined'&&PRIOR_XW.length?{xw:PRIOR_XW,px:PRIOR_PX}:null",t)}ctx.REC_DATA=JSON.parse(fs.readFileSync(__dirname+'/records.json','utf8'));
 const [variant,start,count]=[process.argv[2],+process.argv[3],+process.argv[4]];
 vm.runInContext(`
 
 var PAIRS=[[9,32],[10,31],[11,30],[12,29],[13,28],[15,26],[18,23],[19,22],[20,21]],XW=REC_DATA.xw,XN=XW.reduce((a,b)=>a+b);
 var RATE=YMODE=='u'?REC_DATA.cnt.map(()=>1):YMODE=='pf'?Array.from(PF):REC_DATA.cnt.map((c,i)=>c/REC_DATA.ex[i]);
+/* 모델 분포(YMODE m)의 정답은 ✕ 쌍별 칸 가중치(PRIOR_XW)까지 곱함 */
+function TXF(k,t){const q=TRUTHXW.px.indexOf(PAIRS[k][0]),w=TRUTHXW.xw[q];return w[t[0]]*w[t[1]]*w[t[2]]}
 var TRI={};function triFor(k){if(TRI[k])return TRI[k];const xs=PAIRS[k],ls=[],cum=[];let s=0;
- for(let q=0;q<T.length;q++){const t=T[q];if(t.some(i=>xs.includes(i)))continue;s+=YMODE=='m'?TRUTHW[q]:RATE[t[0]]*RATE[t[1]]*RATE[t[2]];ls.push(t);cum.push(s)}return TRI[k]={ls,cum,s}}
+ for(let q=0;q<T.length;q++){const t=T[q];if(t.some(i=>xs.includes(i)))continue;s+=YMODE=='m'?TRUTHW[q]*(TRUTHXW?TXF(k,t):1):RATE[t[0]]*RATE[t[1]]*RATE[t[2]];ls.push(t);cum.push(s)}return TRI[k]={ls,cum,s}}
 var decW=rollEngine(NB,T,PF),decU=rollEngine(NB,T,null),CACHE=new Map(),MV=[];
 function viaEngine(dec){const a=rollInput();return a?dec(a[0],a[1]):-1}
 var REC={C:()=>{const r=openRec();return r==null?deepRec():r},E:()=>{let r=openRec();if(r==null)r=deepRec();if(r>=0){const p=exPrep();const q=typeof p=='number'?p:exSeq(p);if(q>=0)r=q}return r},A:()=>deepRec(),B:()=>{const s=sureRec();return s>=0?s:viaEngine(decW)},U:()=>{const s=sureRec();return s>=0?s:viaEngine(decU)}};

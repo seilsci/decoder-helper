@@ -19,7 +19,7 @@ let running=0,failed=[];
 function next(){const p=pairs.find(q=>st[q]==='wait');if(!p)return;st[p]='run';running++;
  try{fs.unlinkSync(pf(p))}catch(e){}
  const out=fs.openSync(prefix+'.'+p+'.json','w'),err=fs.openSync(prefix+'.'+p+'.err','w');
- const ch=spawn(cmd[0],[...cmd.slice(1),p],{cwd:__dirname,stdio:['ignore',out,err],env:{...process.env,PROG:pf(p)}});
+ const ch=spawn(cmd[0],[...cmd.slice(1),p],{cwd:__dirname,stdio:['ignore',out,err],env:{...process.env,PROG:pf(p),XP:p}});
  ch.on('error',e=>{fs.writeSync(err,String(e));});
  ch.on('close',code=>{fs.closeSync(out);fs.closeSync(err);running--;
   if(code===0&&ok(prefix+'.'+p+'.json'))st[p]='done';else{st[p]='fail';failed.push(p);console.log('  실패: '+step+' 쌍 '+p+' (종료 코드 '+code+', '+prefix+'.'+p+'.err 참고)')}

@@ -6,13 +6,16 @@
 const PRIOR_CNT=[32,26,40,15,16,21,27,31,26,31,31,16,13,13,38,39,29,36,45,30,16,13,18,45,39,22,46,45,18,19,18,53,42,26,22,31,22,17,16,21,45,30];
 const PRIOR_EXPO=[393,393,393,393,393,393,393,393,393,350,358,347,351,358,393,354,393,393,355,351,320,320,351,355,393,393,354,393,358,351,347,358,350,393,393,393,393,393,393,393,393,393];
 /* 당첨 모델: P(당첨 세 칸 a,b,c) ∝ PF[a]·PF[b]·PF[c] · 간격 계수(a,b)·(a,c)·(b,c) · 좌우 한쪽 계수 · 세 구역 계수 (+ 이전 판 기억)
-   PRIOR_U = 칸별 로그 가중치(PF = exp(U)), PRIOR_SP = [두 당첨 칸 사이 거리 1·2·3칸의 간격 계수, 좌우 한쪽 계수, 세 구역 계수, 거리 4·5칸의 간격 계수(6칸 이상은 1), 칸 번호 세 구역 계수(세 칸이 칸 번호 세 구역에 한 칸씩이면)].
+   PRIOR_U = 칸별 로그 가중치(PF = exp(U)), PRIOR_SP = [두 당첨 칸 사이 거리 1·2·3칸의 간격 계수, 좌우 한쪽 계수, 세 구역 계수, 거리 4·5칸의 간격 계수(6칸 이상은 1), 칸 번호 세 구역 계수(세 칸이 칸 번호 세 구역에 한 칸씩이면), 그러면서 줄도 모두 다를 때의 계수].
    세 구역 계수: 세 칸이 세로 세 구역(x ≤ 2.5 / 3~5 / ≥ 5.5)에 한 칸씩이면 곱함(323판 교차검증 +28 nats).
    좌우 한쪽 계수: 세 칸이 세로 중앙선 왼쪽(x<4)과 오른쪽(x>4)에 나뉘지 않을 때 곱함(가운데 줄 칸은 어느 쪽도 아님). 실제로는 98.7%가 나뉨.
    실제 기록에서 당첨 칸끼리 붙어 있는 경우가 무작위의 약 절반이라 넣음. 두 값은 판 기록 전체로 tools/table/fitmodel.js가 계산(직접 고치지 않음).
    300판 3겹 교차검증(처음 보는 판의 당첨 칸 예측)에서 이전 방식(칸 빈도만, 0.7제곱) 36 → 이 모델 109 nats */
 const PRIOR_U=[-0.01228,0.26843,0.22748,-1.10722,-1.10722,0.22748,0.26843,-0.01228,-0.12438,0.61998,0.81889,-0.82477,-0.76699,-0.82477,0.81889,0.61998,-0.12438,0.38323,0.89975,0.49911,-0.74738,-0.74738,0.49911,0.89975,0.38323,-0.12438,0.61998,0.81889,-0.82477,-0.76699,-0.82477,0.81889,0.61998,-0.12438,-0.01228,0.26843,0.22748,-1.10722,-1.10722,0.22748,0.26843,-0.01228];
 const PRIOR_SP=[0.27469,0.38711,0.51458,0.28389,4.74527,0.59423,0.91253];
+/* ✕ 쌍별 칸 가중치 곱셈표: PRIOR_XW[쌍][칸] (쌍 순서 = PRIOR_PX). ✕ 칸과 같은 줄·같은 칸 번호 구역 칸은 정답이 덜 나옴. 비어 있으면 모두 1 */
+const PRIOR_XW=[];
+const PRIOR_PX=[9,10,11,12,13,15,18,19,20];
 /* 이전 판 기억: 기록에 나온 당첨 세 칸(트리플 번호 T[k], 중복 제거)과 기억 계수 κ.
    배치 가중치에 κ × (전체 배치 평균 가중치)를 더함 → 이미 나온 판이 다시 나올 확률을 높임(같은 당첨 세 칸 반복이 무작위의 약 2.5배라 넣음) */
 const PRIOR_MEM=2.1435;
@@ -26,12 +29,14 @@ const SIDEOF=[8,9,8,9,8].flatMap((n,r)=>Array.from({length:n},(_,c)=>{const x=r%
 /* 칸의 세로 세 구역: 0 (x ≤ 2.5) / 1 (3~5) / 2 (x ≥ 5.5) */
 const ZONEOF=[8,9,8,9,8].flatMap((n,r)=>Array.from({length:n},(_,c)=>{const x=r%2?c:c+.5;return x<=2.5?0:x<5.5?1:2}));
 /* 칸 번호 세 구역: 줄마다 칸 번호(0부터) × 3 ÷ 그 줄의 칸 수를 내림 → 8칸 줄 000 111 22, 9칸 줄 000 111 222 (좌우 비대칭) */
+const ROWOF=[8,9,8,9,8].flatMap((n,r)=>Array(n).fill(r));
 const ZONEIOF=[8,9,8,9,8].flatMap((n,r)=>Array.from({length:n},(_,c)=>Math.floor(c*3/n)));
 /* 기억 없이 계산한 배치 가중치: 칸 가중치 곱 × 간격 계수 × 좌우 한쪽 계수 × 세 구역 계수 */
 function triW0(t){const[a,b,c]=t,sp=PRIOR_SP.length>3&&!((SIDEOF[a]<0||SIDEOF[b]<0||SIDEOF[c]<0)&&(SIDEOF[a]>0||SIDEOF[b]>0||SIDEOF[c]>0))?PRIOR_SP[3]:1;
  const zp=PRIOR_SP.length>4&&ZONEOF[a]!==ZONEOF[b]&&ZONEOF[a]!==ZONEOF[c]&&ZONEOF[b]!==ZONEOF[c]?PRIOR_SP[4]:1;
- const zi=PRIOR_SP.length>7&&ZONEIOF[a]!==ZONEIOF[b]&&ZONEIOF[a]!==ZONEIOF[c]&&ZONEIOF[b]!==ZONEIOF[c]?PRIOR_SP[7]:1;
- return PF[a]*PF[b]*PF[c]*SPW[a*42+b]*SPW[a*42+c]*SPW[b*42+c]*sp*zp*zi}
+ const z3=ZONEIOF[a]!==ZONEIOF[b]&&ZONEIOF[a]!==ZONEIOF[c]&&ZONEIOF[b]!==ZONEIOF[c],zi=PRIOR_SP.length>7&&z3?PRIOR_SP[7]:1;
+ const zr=PRIOR_SP.length>8&&z3&&ROWOF[a]!==ROWOF[b]&&ROWOF[a]!==ROWOF[c]&&ROWOF[b]!==ROWOF[c]?PRIOR_SP[8]:1;
+ return PF[a]*PF[b]*PF[c]*SPW[a*42+b]*SPW[a*42+c]*SPW[b*42+c]*sp*zp*zi*zr}
 /* 기억 더하기: 트리플 "a,b,c" → 더할 값 (rollout.js의 rollEngine과 같은 계산) */
 const MEMADD=(function(){const m=new Map();if(!(PRIOR_SP.length>4&&PRIOR_SEEN.length&&PRIOR_MEM))return m;
  let M=0;for(const t of T)M+=triW0(t);M/=T.length;for(const k of PRIOR_SEEN)m.set(T[k].join(','),PRIOR_MEM*M);return m})();
@@ -43,3 +48,8 @@ function triW(t){return triW0(t)+(MEMADD.get(t.join(','))||0)}
  const _openRec=openRec;
  openRec=function(){return typeof OPENX1!=='undefined'?_openRec(OPENX1,OPENX2,OPENX3,...(typeof OPENXD!=='undefined'?OPENXD:[typeof OPENX4!=='undefined'?OPENX4:null,typeof OPENX5!=='undefined'?OPENX5:null])):_openRec()};
 })();
+
+/* ✕ 쌍별 칸 가중치: PF × PRIOR_XW[쌍] (✕ 칸 xs로 쌍을 찾음). 표가 없거나 쌍이 아니면 PF 그대로 */
+const PFX_CACHE=new Map();
+function pfFor(xs){if(!PRIOR_XW.length||!xs||xs.length!==2)return PF;const q=PRIOR_PX.indexOf(Math.min(xs[0],xs[1]));if(q<0)return PF;
+ let v=PFX_CACHE.get(q);if(!v){v=PF.map((f,i)=>f*PRIOR_XW[q][i]);PFX_CACHE.set(q,v)}return v}
