@@ -7,7 +7,7 @@ const LBRK=s=>s.replace(/([。།។။])\s*(?=\S)|([.।։።۔])\s+(?=\S)/g,(m
 const LPG=18; /* 한 페이지 개수: 기존 언어 18개가 1페이지, 추가 언어는 2페이지부터 */
 
 const REC_URL='https://script.google.com/macros/s/AKfycbw_6H2IjYti4RM224PFnpQDknAGaF9g0Rjkel9GvOr---5WEJZzPMIOpIhhqGJShp1QqA/exec';
-const REC_MIN_MS=20000;
+const REC_MIN_MS=10000;
 const lab=i=>(C[i].r+1)+'-'+(C[i].c+1);
 function track(){
  if(S.mode!=='play'||S.n0!==0||!S.t0||found().length<3||S.xs.size!==2)return;
