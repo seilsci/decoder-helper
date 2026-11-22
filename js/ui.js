@@ -8,6 +8,17 @@ const LPG=18; /* 한 페이지 개수: 기존 언어 18개가 1페이지, 추가
 
 const REC_URL='https://script.google.com/macros/s/AKfycbw_6H2IjYti4RM224PFnpQDknAGaF9g0Rjkel9GvOr---5WEJZzPMIOpIhhqGJShp1QqA/exec';
 const REC_MIN_MS=10000;
+/* 기록에 함께 보내는 것: 사용 버전(학습 판 수-코드 날짜), 기기 ID(이 브라우저에 저장한 무작위 6자), IP 코드(IP를 해시한 짧은 값, IP 원본은 보내지 않음) */
+const APP_REV='1122'; /* 화면·기록 코드를 고칠 때 날짜(MMDD)로 바꿈 */
+const APP_VER=(typeof PRIOR_EXPO!=='undefined'?Math.max(...PRIOR_EXPO):0)+'-'+APP_REV; /* 예: 481-1122 (master.sh가 모델을 다시 맞추면 앞 숫자가 자동으로 바뀜) */
+const DEV_ID=(()=>{try{let v=localStorage.getItem('dh_dev');if(!v){v=Math.random().toString(36).slice(2,8);localStorage.setItem('dh_dev',v)}return v}catch(e){return ''}})();
+let IP_CODE='';
+(async()=>{try{const c=sessionStorage.getItem('dh_ip');if(c){IP_CODE=c;return}}catch(e){}
+ try{const ac=new AbortController();setTimeout(()=>ac.abort(),3000);
+  const r=await fetch('https://api.ipify.org?format=json',{signal:ac.signal});const ip=(await r.json()).ip;if(!ip)return;
+  const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('decoder-helper:'+ip));
+  IP_CODE=Array.from(new Uint8Array(h).slice(0,3),b=>b.toString(16).padStart(2,'0')).join('');
+  try{sessionStorage.setItem('dh_ip',IP_CODE)}catch(e){}}catch(e){}})();
 const lab=i=>(C[i].r+1)+'-'+(C[i].c+1);
 function track(){
  if(S.mode!=='play'||S.n0!==0||!S.t0||found().length<3||S.xs.size!==2)return;
@@ -20,7 +31,7 @@ function track(){
  const lang=String((L[S.lang]&&L[S.lang].lang)||S.lang).replace(/[\t\r\n]/g,' ');
  /* 추천대로만 눌렀다면 몇 번에 끝났는지(같은 x·당첨 칸으로 추천을 그대로 따라 다시 둠). 계산이 실패하면 빈 칸 */
  setTimeout(()=>{let rc='';try{rc=recClicks(X,Y)}catch(e){console.error(e)}
-  const body=line+'\t'+clicks+'\t'+secs+'\t'+lang+'\t'+rc;
+  const body=line+'\t'+clicks+'\t'+secs+'\t'+lang+'\t'+rc+'\t'+APP_VER+'\t'+DEV_ID+'\t'+IP_CODE;
   try{fetch(REC_URL,{method:'POST',mode:'no-cors',body:body,keepalive:true})}catch(e){}},50);
 }
 /* 같은 x 두 칸과 당첨 세 칸으로, 처음부터 추천 칸만 눌렀을 때의 클릭 수 (화면 하단 카운트와 같은 셈). 지금 판 상태 S는 건드리지 않음 */
