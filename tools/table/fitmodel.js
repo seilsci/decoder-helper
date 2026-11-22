@@ -9,8 +9,10 @@
 //        좌우 비대칭이라 학습 때 좌우 뒤집기를 쓰지 않음(위아래 뒤집기만). 419판 5겹 교차검증 +0.10 nats/판, 최근 58·28판 시험도 모두 나음
 //   zr = 세 칸이 칸 번호 세 구역에 한 칸씩이면서 줄도 모두 다르면 곱함(419판 3시험 모두 나음)
 //   → prior.js의 PRIOR_SP = [s1, s2, s3, q, z, s4, s5, zi, zr] (끈 계수는 1, 지금은 z를 끔: 칸 번호 세 구역과 겹쳐 동점)
-// ✕ 같은 줄·구역 계수 xr: 칸이 ✕ 칸과 같은 줄이면서 같은 칸 번호 구역이면 그 칸 가중치에 곱함(✕ 위치에 따라 다름)
-//   → prior.js의 PRIOR_XW[쌍][칸] = ✕ 쌍(PX 순서)별 칸 가중치에 곱하는 값. 앱·표 계산 모두 PF × PRIOR_XW[쌍]을 칸 가중치로 씀
+// ✕ 같은 줄·구역 계수 xr(지금은 끔): 칸이 ✕ 칸과 같은 줄이면서 같은 칸 번호 구역이면 그 칸 가중치에 곱함(✕ 위치에 따라 다름)
+//   켜면 prior.js의 PRIOR_XW[쌍][칸] = ✕ 쌍(PX 순서)별 칸 가중치 곱셈표. 앱·표 계산 모두 PF × PRIOR_XW[쌍]을 칸 가중치로 씀(표 도구는 runpar.js가 XP로 쌍을 넘김)
+//   419판에서는 3시험 모두 나았지만 479판에서는 최근 58·28판 시험이 나빠져 끔 → PRIOR_XW = [] (모두 1)
+// 시험했지만 넣지 않은 것: ✕ 쌍별 칸 보정(과적합), 혼합 모델(구역 규칙 판 비율 π≈0.54, 조금 나쁨), ✕ 쌍별 구역 계수, 칸 번호 여섯·네 구역, 같은 줄 이웃 간격, 행 구역, 좌우 3종 대칭 늘리기
 // 이전 판 기억: 앞에서 나온 당첨 세 칸(PRIOR_SEEN, 트리플 번호)에 κ × (전체 배치 평균 가중치)를 더함 → PRIOR_MEM = κ
 //   κ는 시간 순 우도(각 판은 그 앞의 판들만 기억)로 맞춤. 판 목록이 정해져 있다는 가설(같은 당첨 세 칸 반복이 무작위의 2.5배).
 // u에는 0쪽으로 당기는 벌점(LAM)과, 같은 줄·같은 칸 번호 구역 칸끼리 그 평균 쪽으로 당기는 묶음 벌점(LAMG)을 둠.
@@ -48,6 +50,7 @@ const G=fs.readFileSync(file,'utf8').split('\n').map(l=>l.trim()).filter(Boolean
 const mkG=(xs,ys)=>{ys=ys.slice().sort((a,b)=>a-b);return{L:Int32Array.from(T.map((t,k)=>k).filter(k=>!T[k].some(i=>xs.includes(i)))),y:T.findIndex(t=>t[0]==ys[0]&&t[1]==ys[1]&&t[2]==ys[2]),xs,ys,xc:xrzOf(xs)}};
 const cellAt=(r,x)=>C.findIndex(c=>c.r===r&&c.x===x),FL=[i=>cellAt(4-C[i].r,C[i].x),i=>cellAt(C[i].r,8-C[i].x)];FL.push(i=>FL[0](FL[1](i)));
 // 칸 번호 세 구역이 좌우 비대칭이라 기본은 위아래 뒤집기만 씀(419판: 위아래만 0.711 vs 3종 0.663). --sym3이면 예전처럼 3종 모두
+// 최종 모델 5겹 교차검증(판당 균등 대비 nats): 419판 0.736, 479판 0.758 (이전 방식 3종 대칭·벌점 3은 419판 0.607, 479판 0.629)
 const SYM=!args.includes('--nosym'),FLS=args.includes('--sym3')?FL:[FL[0]],GF=SYM?G.concat(...FLS.map(f=>G.map(g=>mkG(g.xs.map(f),g.ys.map(f))))):G;
 // on = 쓰는 특징(0/1 4개). 꺼진 특징의 계수는 0(곱하는 값 1)으로 고정
 // lt = 특징 계수 NF개 + [✕ 같은 줄·구역 계수(로그)]. on = 쓰는 것(0/1). 꺼진 것은 0(곱하는 값 1)으로 고정
@@ -81,8 +84,9 @@ const memLL=(p,kp)=>Math.log(p.wy+(p.hit?kp*p.M:0))-Math.log(p.Z+kp*p.M*p.n);
 function fitKappa(u,lt){const P=memPre(u,lt);let best=0,bv=-Infinity;for(let e=-3;e<=4.01;e+=0.05){const kp=Math.pow(2,e);let s=0;for(const p of P)s+=memLL(p,kp);if(s>bv){bv=s;best=kp}}
  let s0=0;for(const p of P)s0+=memLL(p,0);return{kappa:+best.toFixed(4),gain:+(bv-s0).toFixed(2)}}
 const realSplit=G.filter(g=>!TF[g.y*NF+3]).length/G.length;
-const MODELS={'균등':[0,0,0,0,0],'칸만':null,'칸+간격':[1,1,1,0,0],'칸+간격+좌우':[1,1,1,1,0],'+세구역':[1,1,1,1,1,0,0],'+거리4·5':[1,1,1,1,1,1,1],'+칸번호세구역':[1,1,1,1,1,1,1,1],'칸번호세구역(세구역뺌)':[1,1,1,1,0,1,1,1],'최종(세줄다름·✕같은줄구역)':[1,1,1,1,0,1,1,1,1,1]};
-const ON=MODELS[process.env.ZMODEL||'최종(세줄다름·✕같은줄구역)']; // 실제로 쓰는 모델
+const MODELS={'균등':[0,0,0,0,0],'칸만':null,'칸+간격':[1,1,1,0,0],'칸+간격+좌우':[1,1,1,1,0],'+세구역':[1,1,1,1,1,0,0],'+거리4·5':[1,1,1,1,1,1,1],'+칸번호세구역':[1,1,1,1,1,1,1,1],'칸번호세구역(세구역뺌)':[1,1,1,1,0,1,1,1],'+✕같은줄구역':[1,1,1,1,0,1,1,1,1,1],'최종(세줄다름)':[1,1,1,1,0,1,1,1,1,0]};
+// ✕ 같은 줄·구역 계수는 419판에서는 3시험 모두 나았지만 479판에서는 최근 58·28판이 나빠져(합 2.474 vs 2.423) 끔 → PRIOR_XW는 빈 표
+const ON=MODELS[process.env.ZMODEL||'최종(세줄다름)']; // 실제로 쓰는 모델
 if(args.includes('--cv')){const K=+args[args.indexOf('--cv')+1]||3;
  console.log(`${G.length}판 ${K}겹 교차검증 — 처음 보는 판의 로그우도 합(클수록 좋음), 균등 대비 nats / 좌우 나뉨 확률(실제 ${(realSplit*100).toFixed(1)}%)`);
  const res={};for(const[name,on]of Object.entries(MODELS)){let ll=0;
@@ -97,7 +101,7 @@ if(args.includes('--cv')){const K=+args[args.indexOf('--cv')+1]||3;
  process.exit(0)}
 const m=fit(GF,ON);
 const U=Array.from(m.u,v=>+v.toFixed(5)),SP=Array.from(m.lt.slice(0,NF),v=>+Math.exp(v).toFixed(5)),XR=+Math.exp(m.lt[NF]).toFixed(5);
-const XW=PX.map(p=>Array.from(xrzOf([p,41-p]),v=>v?XR:1));
+const XW=ON[NF]?PX.map(p=>Array.from(xrzOf([p,41-p]),v=>v?XR:1)):[]; // 계수를 끄면 빈 표(앱·표 도구 모두 PF 그대로)
 const MK=fitKappa(m.u,m.lt),SEEN=[...new Set(G.map(g=>g.y))].sort((a,b)=>a-b);
 const cnt=Array(42).fill(0),ex=Array(42).fill(0);for(const{xs,ys}of G){for(let i=0;i<42;i++)if(!xs.includes(i))ex[i]++;for(const y of ys)cnt[y]++}
 console.log(JSON.stringify({games:G.length,sym:SYM,iter:m.it,obj:+m.obj.toFixed(4),mem:{kappa:MK.kappa,gainNats:MK.gain,seen:SEEN.length},xr:XR,split:{real:+realSplit.toFixed(4),model:+splitRate(G,m.u,m.lt).toFixed(4)},SP,U}));
