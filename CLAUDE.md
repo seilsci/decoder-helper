@@ -29,7 +29,7 @@ Asphalt Legends 디코더 이벤트용 비공식 팬 도구. 사이트: https://
 ## 기록(구글 시트 "decoder")
 
 - 탭: `data`(학습용 기보 한 줄씩), `log`(판별 기록), `prior`(칸별·✕쌍별 통계)
-- log 열: A 날짜, B 상태, C 기보, D 실제 클릭, E 시간(초), F 언어, G 추천대로였다면 몇 번, H 사용 버전(예 `481-1123` = 학습 판 수-코드 날짜 APP_REV), I 기기 ID(브라우저 저장 무작위 6자), J IP 코드(IP의 SHA-256 앞 6자, 원본은 안 보냄)
+- log 열: A 날짜, B 상태, C 기보, D 실제 클릭, E 시간(초), F 언어, G 추천대로였다면 몇 번, H 사용 버전(예 `481-1124` = 학습 판 수-APP_REV, APP_REV는 화면·기록 코드를 고칠 때마다 올림), I 기기 ID(브라우저 저장 무작위 6자), J IP 코드(IP의 SHA-256 앞 6자, 원본은 안 보냄), K 국가 코드(api.country.is, 예 KR), L 시간대(예 Asia/Seoul)
 - H가 비면 예전 버전 페이지. 새 버전 평균은 `=AVERAGEIF(H2:H,"481-*",G2:G)`처럼 H로 거름.
 - Apps Script doPost: 10초 미만 판 제외(ui.js REC_MIN_MS), 같은 기보 1분 안 중복 제외. doGet `?a=prior`는 prior 시트 값 제공.
 
