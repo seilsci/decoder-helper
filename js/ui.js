@@ -9,10 +9,16 @@ const LPG=18; /* 한 페이지 개수: 기존 언어 18개가 1페이지, 추가
 const REC_URL='https://script.google.com/macros/s/AKfycbw_6H2IjYti4RM224PFnpQDknAGaF9g0Rjkel9GvOr---5WEJZzPMIOpIhhqGJShp1QqA/exec';
 const REC_MIN_MS=10000;
 /* 기록에 함께 보내는 것: 사용 버전(학습 판 수-코드 날짜), 기기 ID(이 브라우저에 저장한 무작위 6자), IP 코드(IP를 해시한 짧은 값, IP 원본은 보내지 않음) */
-const APP_REV='1123'; /* 화면·기록 코드를 고칠 때 날짜(MMDD)로 바꿈 */
+const APP_REV='1124'; /* 화면·기록 코드를 고칠 때마다 올리는 네 자리 번호(대략 MMDD). 바뀌면 열린 페이지가 자동으로 새 버전을 받음 */
 const APP_VER=(typeof PRIOR_EXPO!=='undefined'?Math.max(...PRIOR_EXPO):0)+'-'+APP_REV; /* 예: 481-1122 (master.sh가 모델을 다시 맞추면 앞 숫자가 자동으로 바뀜) */
 const DEV_ID=(()=>{try{let v=localStorage.getItem('dh_dev');if(!v){v=Math.random().toString(36).slice(2,8);localStorage.setItem('dh_dev',v)}return v}catch(e){return ''}})();
-let IP_CODE='';
+let IP_CODE='',CC='';
+/* 시간대(기기 설정, 외부 요청 없음)와 국가 코드(api.country.is로 받은 두 글자, 3초 안에 못 받으면 빈 칸) */
+const TZ=(()=>{try{return String(Intl.DateTimeFormat().resolvedOptions().timeZone||'').replace(/[^A-Za-z0-9_\/+\-]/g,'').slice(0,40)}catch(e){return ''}})();
+(async()=>{try{const c=sessionStorage.getItem('dh_cc');if(c){CC=c;return}}catch(e){}
+ try{const ac=new AbortController();setTimeout(()=>ac.abort(),3000);
+  const r=await fetch('https://api.country.is/',{signal:ac.signal});const c=String((await r.json()).country||'').toUpperCase();
+  if(/^[A-Z]{2}$/.test(c)){CC=c;try{sessionStorage.setItem('dh_cc',c)}catch(e){}}}catch(e){}})();
 (async()=>{try{const c=sessionStorage.getItem('dh_ip');if(c){IP_CODE=c;return}}catch(e){}
  try{const ac=new AbortController();setTimeout(()=>ac.abort(),3000);
   const r=await fetch('https://api.ipify.org?format=json',{signal:ac.signal});const ip=(await r.json()).ip;if(!ip)return;
@@ -31,7 +37,7 @@ function track(){
  const lang=String((L[S.lang]&&L[S.lang].lang)||S.lang).replace(/[\t\r\n]/g,' ');
  /* 추천대로만 눌렀다면 몇 번에 끝났는지(같은 x·당첨 칸으로 추천을 그대로 따라 다시 둠). 계산이 실패하면 빈 칸 */
  setTimeout(()=>{let rc='';try{rc=recClicks(X,Y)}catch(e){console.error(e)}
-  const body=line+'\t'+clicks+'\t'+secs+'\t'+lang+'\t'+rc+'\t'+APP_VER+'\t'+DEV_ID+'\t'+IP_CODE;
+  const body=line+'\t'+clicks+'\t'+secs+'\t'+lang+'\t'+rc+'\t'+APP_VER+'\t'+DEV_ID+'\t'+IP_CODE+'\t'+CC+'\t'+TZ;
   try{fetch(REC_URL,{method:'POST',mode:'no-cors',body:body,keepalive:true})}catch(e){}
   if(typeof updTarget!=='undefined'&&updTarget)setTimeout(updApply,2500)},50);
 }
