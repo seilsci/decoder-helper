@@ -9,22 +9,23 @@ const LPG=18; /* 한 페이지 개수: 기존 언어 18개가 1페이지, 추가
 const REC_URL='https://script.google.com/macros/s/AKfycbw_6H2IjYti4RM224PFnpQDknAGaF9g0Rjkel9GvOr---5WEJZzPMIOpIhhqGJShp1QqA/exec';
 const REC_MIN_MS=10000;
 /* 기록에 함께 보내는 것: 사용 버전(학습 판 수-코드 날짜), 기기 ID(이 브라우저에 저장한 무작위 6자), IP 코드(IP를 해시한 짧은 값, IP 원본은 보내지 않음) */
-const APP_REV='1124'; /* 화면·기록 코드를 고칠 때마다 올리는 네 자리 번호(대략 MMDD). 바뀌면 열린 페이지가 자동으로 새 버전을 받음 */
+const APP_REV='1125'; /* 화면·기록 코드를 고칠 때마다 올리는 네 자리 번호(대략 MMDD). 바뀌면 열린 페이지가 자동으로 새 버전을 받음 */
 const APP_VER=(typeof PRIOR_EXPO!=='undefined'?Math.max(...PRIOR_EXPO):0)+'-'+APP_REV; /* 예: 481-1122 (master.sh가 모델을 다시 맞추면 앞 숫자가 자동으로 바뀜) */
 const DEV_ID=(()=>{try{let v=localStorage.getItem('dh_dev');if(!v){v=Math.random().toString(36).slice(2,8);localStorage.setItem('dh_dev',v)}return v}catch(e){return ''}})();
 let IP_CODE='',CC='';
+const ipHash=async ip=>{const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('decoder-helper:'+ip));return Array.from(new Uint8Array(h).slice(0,3),b=>b.toString(16).padStart(2,'0')).join('')};
+const setIP=c=>{if(!IP_CODE&&c){IP_CODE=c;try{sessionStorage.setItem('dh_ip',c)}catch(e){}}};
 /* 시간대(기기 설정, 외부 요청 없음)와 국가 코드(api.country.is로 받은 두 글자, 3초 안에 못 받으면 빈 칸) */
 const TZ=(()=>{try{return String(Intl.DateTimeFormat().resolvedOptions().timeZone||'').replace(/[^A-Za-z0-9_\/+\-]/g,'').slice(0,40)}catch(e){return ''}})();
 (async()=>{try{const c=sessionStorage.getItem('dh_cc');if(c){CC=c;return}}catch(e){}
  try{const ac=new AbortController();setTimeout(()=>ac.abort(),3000);
-  const r=await fetch('https://api.country.is/',{signal:ac.signal});const c=String((await r.json()).country||'').toUpperCase();
-  if(/^[A-Z]{2}$/.test(c)){CC=c;try{sessionStorage.setItem('dh_cc',c)}catch(e){}}}catch(e){}})();
+  const r=await fetch('https://api.country.is/',{signal:ac.signal});const j=await r.json(),c=String(j.country||'').toUpperCase();
+  if(/^[A-Z]{2}$/.test(c)){CC=c;try{sessionStorage.setItem('dh_cc',c)}catch(e){}}
+  if(j.ip&&!IP_CODE)setIP(await ipHash(String(j.ip)))}catch(e){}})(); /* ipify가 막힌 곳(예: 중국)에서는 여기서 받은 IP로 IP 코드를 만듦 */
 (async()=>{try{const c=sessionStorage.getItem('dh_ip');if(c){IP_CODE=c;return}}catch(e){}
  try{const ac=new AbortController();setTimeout(()=>ac.abort(),3000);
   const r=await fetch('https://api.ipify.org?format=json',{signal:ac.signal});const ip=(await r.json()).ip;if(!ip)return;
-  const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode('decoder-helper:'+ip));
-  IP_CODE=Array.from(new Uint8Array(h).slice(0,3),b=>b.toString(16).padStart(2,'0')).join('');
-  try{sessionStorage.setItem('dh_ip',IP_CODE)}catch(e){}}catch(e){}})();
+  setIP(await ipHash(ip))}catch(e){}})();
 const lab=i=>(C[i].r+1)+'-'+(C[i].c+1);
 function track(){
  if(S.mode!=='play'||S.n0!==0||!S.t0||found().length<3||S.xs.size!==2)return;
