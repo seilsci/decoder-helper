@@ -29,8 +29,8 @@ Asphalt Legends 디코더 이벤트용 비공식 팬 도구. 사이트: https://
 ## 기록(구글 시트 "decoder")
 
 - 탭: `data`(학습용 기보 한 줄씩), `log`(판별 기록), `prior`(칸별·✕쌍별 통계)
-- log 열: A 날짜, B 기보, C 실제 클릭(유저판수), D 추천대로였다면 몇 번(추천판수), E 국가 코드(api.country.is 등, 예 KR), F 시간(초), G IP 코드(IP의 SHA-256 앞 6자, 원본은 안 보냄), H 기기 ID(브라우저 저장 무작위 6자), I 사용 버전(예 `586-1126` = 학습 판 수-APP_REV, APP_REV는 화면·기록 코드를 고칠 때마다 올림), J 시간대(예 Asia/Seoul), K 언어, L 상태(ok/dup/bad:…)
-- I가 비면 예전 버전 페이지. 새 버전 평균은 `=AVERAGEIF(I2:I,"586-*",D2:D)`처럼 I로 거름. A열 표시 형식은 `mm/dd(ddd) hh:mm.ss`.
+- log 열: A 날짜, B 기보, C 실제 클릭(유저판수), D 추천대로였다면 몇 번(추천판수), E 국가 코드(api.country.is 등, 예 KR), F 시간(초), G 기기 ID(브라우저 저장 무작위 6자), H IP 코드(IP의 SHA-256 앞 6자, 원본은 안 보냄), I 사용 버전(예 `586-1126` = 학습 판 수-APP_REV, APP_REV는 화면·기록 코드를 고칠 때마다 올림), J 시간대(예 Asia/Seoul), K 언어, L 상태(ok/dup/bad:…)
+- I가 비면 예전 버전 페이지. 새 버전 평균은 `=AVERAGEIF(I2:I,"586-*",D2:D)`처럼 I로 거름. A열 표시 형식은 `mm/dd(ddd) hh:mm:ss`(Apps Script가 새 행마다 지정).
 - Apps Script의 appendRow 순서도 위 열 순서와 같음(1분 중복 확인은 B 기보·L 상태를 봄).
 - Apps Script doPost: 10초 미만 판 제외(ui.js REC_MIN_MS), 같은 기보 1분 안 중복 제외. doGet `?a=prior`는 prior 시트 값 제공.
 
