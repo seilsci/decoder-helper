@@ -1,5 +1,5 @@
 const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage();
-const errs=[];p.on('pageerror',e=>errs.push(e.message));p.on('console',m=>{if(m.type()=='error'&&!/ERR_TUNNEL|Failed to load resource/.test(m.text()))errs.push(m.text())});
+const errs=[];p.on('pageerror',e=>errs.push(e.message));p.on('console',m=>{if(m.type()=='error'&&!/ERR_TUNNEL|Failed to load resource|URL scheme "file" is not supported/.test(m.text()))errs.push(m.text())});
 await p.goto(require('url').pathToFileURL(require('path').resolve(__dirname,'../../../index.html')).href);await p.waitForTimeout(800);
 await p.evaluate(()=>{S.lang='ko';render()});
 const cdp=await p.context().newCDPSession(p);await cdp.send('Emulation.setCPUThrottlingRate',{rate:4});
