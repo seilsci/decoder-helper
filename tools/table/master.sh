@@ -46,7 +46,7 @@ merge(){
  [ -f baseline.next.json ] && cp baseline.next.json baseline.json   # 다음 비교의 기준
  local N F files=(); N=$(grep -c . records.txt)
  for F in js/prior.js js/tables.js tools/table/records.txt tools/table/baseline.json tools/table/steptimes.json tools/table/verify/records.json tools/table/verify/kibo.txt; do [ -e "$ROOT/$F" ] && files+=("$F"); done
- git -C "$ROOT" add -- "${files[@]}" || return 1
+ git -C "$ROOT" -c core.safecrlf=false add -- "${files[@]}" || return 1
  if ! git -C "$ROOT" diff --cached --quiet; then
   git -C "$ROOT" commit -q -m "판 기록 ${N}판으로 당첨 모델과 시작 표(OPENX1-13) 다시 계산 (master.sh, 검증 통과)" || return 1; fi
  # 실행 중에 다른 곳(클라우드 세션 등)에서 작업 브랜치에 커밋이 올라왔으면 먼저 합침(표·모델 파일을 바꾸는 커밋이면 멈춤)
