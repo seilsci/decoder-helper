@@ -1,4 +1,4 @@
-// node fitmodel.js [기록 파일, 기본 records.txt] [--write] [--cv [K]]
+// node fitmodel.js [기록 파일, 기본 records.txt] [--write] [--cv [K]] [--holdout <이전 prior.js>]
 // 판 기록(한 줄에 "x : 2-4 4-6 y : 3-2 3-3 5-8")으로 당첨 모델을 맞춤:
 //   P(당첨 세 칸 a,b,c | ✕) ∝ w[a]·w[b]·w[c] · s[d(a,b)]·s[d(a,c)]·s[d(b,c)] · (세 칸이 한쪽이면 q)
 //   w = 칸별 가중치(exp(u)), s[d] = 두 당첨 칸 사이 거리 d(1~3)의 간격 계수(4 이상은 1)
@@ -99,6 +99,23 @@ if(args.includes('--cv')){const K=+args[args.indexOf('--cv')+1]||3;
  for(const kp of[0.5,1,2,4,8]){let d=0;for(let f=0;f<K;f++){const tr=G.filter((_,i)=>i%K!==f),m=fit(tr,ON);const P=memPre(m.u,m.lt);G.forEach((g,i)=>{if(i%K===f)d+=memLL(P[i],kp)-memLL(P[i],0)})}
   console.log(`  +기억 κ=${kp}`.padEnd(12)+` ${(d+res['+거리4·5']-res['균등']).toFixed(2).padStart(8)} nats  (거리4·5 대비 ${d>=0?'+':''}${d.toFixed(2)})`)}
  process.exit(0)}
+// --holdout <이전 prior.js>: 머지 판정 4c. 이전 버전이 학습하지 않은 최근 판(H판)을 떼어 두고, 나머지로 새로 학습한 모델과 이전 모델이
+//   그 판들의 당첨 세 칸을 얼마나 잘 맞히는지(로그우도) 판별로 비교. 기억은 두 모델 모두 자기 학습 판만. H = min(새로 생긴 판, max(30, 15%))
+if(args.includes('--holdout')){const op=args[args.indexOf('--holdout')+1],os=fs.readFileSync(op,'utf8');
+ const arr=n=>{const m=os.match(new RegExp('const '+n+'=(\\[[^\\]]*\\])'));if(!m)throw new Error('이전 prior.js: '+n);return JSON.parse(m[1])};
+ const N=G.length,Nold=Math.max(...arr('PRIOR_EXPO')),out=o=>{console.log(JSON.stringify(o));process.exit(0)};
+ if(N-Nold<30)out({ok:false,N,Nold,msg:'이전 버전 뒤 새 판 '+(N-Nold)+'판 (30판 이상 필요)'});
+ const H=Math.min(N-Nold,Math.max(30,Math.round(N*.15))),NT0=N-H,tr=G.slice(0,NT0),te=G.slice(NT0);
+ const trF=SYM?tr.concat(...FLS.map(f=>tr.map(g=>mkG(g.xs.map(f),g.ys.map(f))))):tr,mn=fit(trF,ON);
+ const Pn=memPre(mn.u,mn.lt).slice(0,NT0);let kn=0,bv=-Infinity;for(let e=-3;e<=4.01;e+=0.05){const kp=Math.pow(2,e);let s=0;for(const p of Pn)s+=memLL(p,kp);if(s>bv){bv=s;kn=kp}}
+ const ll=(w,seen,kp)=>{let M=0;for(let k=0;k<NT;k++)M+=w[k];M/=NT;const S=new Set(seen);
+  return te.map(g=>{let Z=0;for(let j=0;j<g.L.length;j++)Z+=w[g.L[j]];const n=[...S].filter(k=>!T[k].some(c=>g.xs.includes(c))).length;
+   return Math.log(w[g.y]+(S.has(g.y)?kp*M:0))-Math.log(Z+kp*M*n)+Math.log(g.L.length)})};
+ const spo=arr('PRIOR_SP'),lto=new Float64Array(NF+1);for(let j=0;j<NF;j++)lto[j]=j<spo.length?Math.log(spo[j]):0;
+ const mo=os.match(/const PRIOR_MEM=([^;]*);/),ko=mo?+mo[1]:0;
+ const a=ll(baseW(Float64Array.from(arr('PRIOR_U')),lto),arr('PRIOR_SEEN'),ko),b=ll(baseW(mn.u,mn.lt),[...new Set(tr.map(g=>g.y))],kn);
+ const d=b.map((v,i)=>v-a[i]),m=d.reduce((x,y)=>x+y)/H,se=Math.sqrt(d.reduce((x,v)=>x+(v-m)**2,0)/(H-1)/H),avg=x=>x.reduce((p,q)=>p+q)/H;
+ out({ok:true,N,Nold,H,train:NT0,old:+avg(a).toFixed(4),new:+avg(b).toFixed(4),diff:+m.toFixed(4),se:+se.toFixed(4),z:+(m/se).toFixed(2),kappa:{old:ko,new:+kn.toFixed(4)}})}
 const m=fit(GF,ON);
 const U=Array.from(m.u,v=>+v.toFixed(5)),SP=Array.from(m.lt.slice(0,NF),v=>+Math.exp(v).toFixed(5)),XR=+Math.exp(m.lt[NF]).toFixed(5);
 const XW=ON[NF]?PX.map(p=>Array.from(xrzOf([p,41-p]),v=>v?XR:1)):[]; // 계수를 끄면 빈 표(앱·표 도구 모두 PF 그대로)

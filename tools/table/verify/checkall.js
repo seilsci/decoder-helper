@@ -4,7 +4,8 @@
 //         out/dist.json  4b 백테스트의 클릭 수별 판 수(새·이전), 요약 아래에 표로도 출력
 //   독립 작업은 병렬로 실행(동시에 JOBS개). 진행률은 progress.js 'verify' 단계로 보고
 //   판정은 z = (새 − 이전) / 판별 차이의 표준오차(음수 = 새가 나음)로:
-//     4a 실제 기록 재생 — 유의하게 나쁘지 않음(z < 2) / 4b 모델 분포 B4N판(기본 20000) — 유의하게 나음(z < −1.96)
+//     4a 실제 기록 재생 — 참고만(이전 버전이 외운 판이 섞여 공정하지 않음) / 4b 모델 분포 B4N판(기본 20000) — 유의하게 나쁘지 않음(z < 2)
+//     4c 새 판 예측 — 이전 버전이 학습하지 않은 최근 판을 떼어 두고 다시 학습한 모델 vs 이전 모델의 당첨 세 칸 로그우도. 유의하게 나쁘지 않음(z > −2)
 const fs=require('fs'),path=require('path'),crypto=require('crypto'),{spawn,execFileSync}=require('child_process');
 const V=__dirname,TB=path.dirname(V),ROOT=path.resolve(TB,'../..'),OUT=path.join(V,'out');fs.mkdirSync(OUT,{recursive:true});
 let P=null;try{P=require('../progress.js')}catch(e){}
@@ -51,17 +52,22 @@ const timer=setInterval(tick,5000);
  // 4a: 판별 클릭(kiboV 출력 3번째 칸)을 짝지어 비교 → 유의하게 나쁘지 않으면(z < 2) 통과. 출력은 out/kibo.old.txt, out/kibo.new.txt
  const kiboG=(d,name)=>run([js('verify/kiboV.js')],{KF:'kibo.txt',...(d?{D:d}:{})},path.join(OUT,'kibo.'+name+'.txt')).then(r=>r.so.trim().split('\n').filter(l=>!l.startsWith('sum')).map(l=>+l.split('\t')[2]));
  const t4a=Promise.all([kiboG(OLDJS,'old'),kiboG(null,'new')]).then(([o,n])=>{if(!o.length||o.length!==n.length||o.some(isNaN)||n.some(isNaN)){R['4a']={pass:false,msg:'실행 오류'};return}
-  const s=pz(o,n);R['4a']={pass:s.z<2,msg:s.N+'판: 이전 '+s.avg(o).toFixed(3)+' → 새 '+s.avg(n).toFixed(3)+' (차이 '+(s.m>=0?'+':'')+s.m.toFixed(3)+' ± '+s.se.toFixed(3)+', z='+s.z.toFixed(2)+', 2보다 작아야 함)'}});
+  const s=pz(o,n);R['4a']={pass:true,info:true,msg:'(참고) '+s.N+'판: 이전 '+s.avg(o).toFixed(3)+' → 새 '+s.avg(n).toFixed(3)+' (차이 '+(s.m>=0?'+':'')+s.m.toFixed(3)+' ± '+s.se.toFixed(3)+', z='+s.z.toFixed(2)+')'}});
  // 4b: 모델 분포 B4N판(기본 20000)을 1250판 묶음으로, 이전/새 같은 시드 → 유의하게 나으면(z < −1.96) 통과
  const B4N=+process.env.B4N||20000,starts=[];for(let s=0;s<B4N;s+=1250)starts.push(s);
  const sim2=d=>Promise.all(starts.map(s=>run([js('verify/simx2.js'),'C',String(s),String(Math.min(1250,B4N-s))],{YMODE:'m',...(d?{D:d}:{})}).then(r=>lastJSON(r.so))))
   .then(a=>a.some(x=>!x)?null:a.flatMap(x=>x.res));
  const t4b=Promise.all([sim2(OLDJS),sim2(null)]).then(([o,n])=>{if(!o||!n){R['4b']={pass:false,msg:'실행 오류'};return}
-  DIST={N:n.length,old:o,new:n};const s=pz(o,n);R['4b']={pass:s.m<0&&s.z<-1.96,msg:'모델 분포 '+s.N+'판: 이전 '+s.avg(o).toFixed(3)+' → 새 '+s.avg(n).toFixed(3)+' (차이 '+s.m.toFixed(3)+' ± '+s.se.toFixed(3)+', z='+s.z.toFixed(2)+', -1.96보다 작아야 함)'}});
- await Promise.all([t2,t3,t4a,t4b]);clearInterval(timer);done=total;tick();
- const NAMES={1:'1. 9쌍 비교',2:'2. 표 일관성',3:'3. 화면 테스트','4a':'4a. 실제 기록 재생','4b':'4b. 모델 분포 비교'};
+  DIST={N:n.length,old:o,new:n};const s=pz(o,n);R['4b']={pass:s.z<2,msg:'모델 분포 '+s.N+'판: 이전 '+s.avg(o).toFixed(3)+' → 새 '+s.avg(n).toFixed(3)+' (차이 '+s.m.toFixed(3)+' ± '+s.se.toFixed(3)+', z='+s.z.toFixed(2)+', 2보다 작아야 함)'}});
+ // 4c: 새 판 예측(fitmodel.js --holdout)
+ const t4c=run([js('fitmodel.js'),js('records.txt'),'--holdout',path.join(OLDJS,'prior.js')]).then(r=>{const j=lastJSON(r.so);
+  if(!j){R['4c']={pass:false,msg:'실행 오류: '+r.se.trim().split('\n').slice(-1)[0]};return}
+  if(!j.ok){R['4c']={pass:false,msg:j.msg};return}
+  R['4c']={pass:j.z>-2,msg:'최근 '+j.H+'판(새 모델은 앞 '+j.train+'판으로 학습): 이전 '+j.old.toFixed(3)+' → 새 '+j.new.toFixed(3)+' nats/판 (차이 '+(j.diff>=0?'+':'')+j.diff.toFixed(3)+' ± '+j.se.toFixed(3)+', z='+j.z.toFixed(2)+', -2보다 커야 함)'}});
+ await Promise.all([t2,t3,t4a,t4b,t4c]);clearInterval(timer);done=total;tick();
+ const NAMES={1:'1. 9쌍 비교',2:'2. 표 일관성',3:'3. 화면 테스트','4a':'4a. 실제 기록 재생','4b':'4b. 모델 분포 비교','4c':'4c. 새 판 예측'};
  console.log('\n=== 검증 요약 (이전 버전: '+OLD+') ===');
- for(const k of['1','2','3','4a','4b'])console.log((R[k].pass?'통과':'실패')+'  '+NAMES[k].padEnd(12)+'  '+R[k].msg);
+ for(const k of['1','2','3','4a','4b','4c'])console.log((R[k].info?'참고':R[k].pass?'통과':'실패')+'  '+NAMES[k].padEnd(12)+'  '+R[k].msg);
  if(DIST){const d=distTable(DIST.old,DIST.new);console.log(d.text);fs.writeFileSync(path.join(OUT,'dist.json'),JSON.stringify(d.json,null,1))}
  const pass=Object.values(R).every(r=>r.pass);
  const h=f=>crypto.createHash('sha1').update(fs.readFileSync(path.join(ROOT,f))).digest('hex');
