@@ -14,6 +14,7 @@ function line(l){fs.writeSync(log,l+'\n');
  if(/^===== master\.sh 시작/.test(l)){stage='';pct=''}
  if(/ 진행중$/.test(l)){stage=l;draw();return}
  if(/^\d+% 완료/.test(l)){pct=l;if(/^100%/.test(l)){draw();W('\n');drawn=false;stage='';pct=''}else draw();return}
+ if(/^■ /.test(l)){const m=/\d+% 완료.*$/.exec(l);if(m)pct=m[0]}   // 단계 끝 줄의 %로 진행 줄도 맞춤(예전 % 남지 않게)
  clear();W(l+'\n');
  if(/ 완료$/.test(l)&&stage&&l.replace(/ 완료$/,'')===stage.replace(/ 진행중$/,''))stage='';
  draw()}
