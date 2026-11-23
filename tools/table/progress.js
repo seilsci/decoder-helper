@@ -1,20 +1,21 @@
 // master.sh 진행 표시: 전체 작업 기준 % + 현재 시각 + 100% 예상 시각
 //   단계 가중치 = steptimes.json(지난 실행에서 잰 단계별 초)이 있으면 그 값, 없으면 아래 기본값
-//   큰 단계(OPEN 1-3, OPEN 4~13, 표 쓰기·비교, 검증 = 13단계)가 끝날 때마다 "■ 단계 끝" 줄을 새로 찍음
+//   큰 단계(모델 학습, OPEN 1-3, OPEN 4~13, 표 쓰기·비교, 검증 = 14단계)가 끝날 때마다 "■ 단계 끝" 줄을 새로 찍음
 //   단계 안에서는 작업이 보고한 진행률과 "걸린 시간 ÷ 예상 시간" 중 큰 값으로 %를 올림(첫 상태 계산이 길어 0%에 오래 머무는 것 방지)
 //   % 줄은 1% 오르거나 1분이 지나면 다시 찍음(현재 시각 갱신)
 //   상태는 prog/state.json에 둠 (clean.sh가 지움)
-//   node progress.js start            — 이번 실행 시작
+//   node progress.js start            — 이번 실행 시작(모델 학습 전에 부름. 학습은 매번 다시 하므로 fit은 안 끝난 것으로)
+//   node progress.js reset            — 계산 결과를 지운 뒤: 학습(fit) 말고는 모두 안 끝난 것으로
 //   node progress.js done <단계> [초]  — 단계 끝 표시 (초를 주면 걸린 시간으로 기록)
 //   node progress.js tick <단계>       — 진행 줄 갱신만 (runpar를 거치지 않는 단계용)
 //   node progress.js save             — 이번 실행에서 잰 단계별 시간을 steptimes.json에 씀
 const fs=require('fs'),path=require('path');
 const DIR=path.join(__dirname,'prog'),SF=path.join(DIR,'state.json'),TF=path.join(__dirname,'steptimes.json');
 const DEPTHS=[4,5,6,7,8,9,10,11,12,13];
-const STEPS=['g2',...DEPTHS.flatMap(n=>['g'+n,'f'+n]),'cmp','verify'];
+const STEPS=['fit','g2',...DEPTHS.flatMap(n=>['g'+n,'f'+n]),'cmp','verify'];
 // 큰 단계: 이름과 그 단계의 마지막 세부 단계
-const STAGES=[['OPEN 1-3','g2'],...DEPTHS.map(n=>['OPEN '+n,'f'+n]),['표 쓰기·비교','cmp'],['검증','verify']];
-const DEF={g2:3000,g4:400,g5:300,cmp:200,verify:900};for(const n of DEPTHS){DEF['f'+n]=60;if(n>5)DEF['g'+n]=150}
+const STAGES=[['모델 학습','fit'],['OPEN 1-3','g2'],...DEPTHS.map(n=>['OPEN '+n,'f'+n]),['표 쓰기·비교','cmp'],['검증','verify']];
+const DEF={fit:400,g2:3000,g4:400,g5:300,cmp:200,verify:900};for(const n of DEPTHS){DEF['f'+n]=60;if(n>5)DEF['g'+n]=150}
 const W=Object.assign({},DEF,fs.existsSync(TF)?JSON.parse(fs.readFileSync(TF,'utf8')):{});
 const TOTAL=STEPS.reduce((s,k)=>s+W[k],0);
 const load=()=>{try{return JSON.parse(fs.readFileSync(SF,'utf8'))}catch(e){return{done:{},meas:{}}}};
@@ -38,10 +39,14 @@ function setCur(s,step){if(!s.cur||s.cur.step!==step)s.cur={step,t:Date.now()}}
 function tick(step,f){const s=load();if(!s.t0)return;setCur(s,step);report(s,frac(s,step,f));save(s)}
 module.exports={tick,STEPS};
 if(require.main===module){const[cmd,step,sec]=process.argv.slice(2);const s=load();
- if(cmd==='start'){s.t0=Date.now();s.meas={};s.cur=null;s.last=-1;s.lastT=0;
+ if(cmd==='start'){s.t0=Date.now();s.meas={};s.cur=null;s.last=-1;s.lastT=0;delete s.done.fit;
+  // 판 기록이 지난번과 다르면 모델이 바뀌어 처음부터 다시 계산하게 되므로 끝난 단계도 모두 지움(%가 거꾸로 가지 않게)
+  let rh='';try{rh=require('crypto').createHash('sha1').update(fs.readFileSync(path.join(__dirname,'records.txt'))).digest('hex')}catch(e){}
+  if(s.rec!==rh){s.done={};s.rec=rh}
   const k=STAGES.filter(([,e])=>s.done[e]).length;
   if(k)console.log('이미 끝난 단계 '+k+'/'+STAGES.length+'는 건너뜀');
   report(s,frac(s),true);save(s)}
+ else if(cmd==='reset'){s.done=s.done.fit?{fit:1}:{};s.cur=null;save(s)}
  else if(cmd==='tick'){if(s.t0){setCur(s,step);report(s,frac(s,step,0));save(s)}}
  else if(cmd==='done'){if(!STEPS.includes(step))throw new Error('단계 '+step);
   const was=s.done[step];s.done[step]=1;if(sec!==undefined)s.meas[step]=+sec;
@@ -52,4 +57,4 @@ if(require.main===module){const[cmd,step,sec]=process.argv.slice(2);const s=load
   else if(s.t0)report(s,frac(s));save(s)}
  else if(cmd==='save'){const old=fs.existsSync(TF)?JSON.parse(fs.readFileSync(TF,'utf8')):{};const out={};for(const k of STEPS)out[k]=s.meas[k]!==undefined?Math.max(1,Math.round(s.meas[k])):(old[k]??DEF[k]);
   fs.writeFileSync(TF,JSON.stringify(out,null,1)+'\n');console.log('steptimes.json 갱신 (다음 실행의 진행률 가중치)')}
- else{console.error('사용법: node progress.js start|done <단계> [초]|tick <단계>|save');process.exit(1)}}
+ else{console.error('사용법: node progress.js start|reset|done <단계> [초]|tick <단계>|save');process.exit(1)}}

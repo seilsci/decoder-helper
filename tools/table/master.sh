@@ -70,19 +70,24 @@ if [ $FETCH = 1 ]; then
  mv -f records.new.txt records.txt
 fi
 node mkrec.js || exit 1
-node fitmodel.js --write || exit 1
+mkdir -p prog; node progress.js start   # 진행 표시 시작(모델 학습부터 0%)
+say "모델 학습 진행중"; t=$(now)
+( while sleep 30; do node progress.js tick fit; done ) & tk=$!
+node fitmodel.js --write; frc=$?
+kill $tk 2>/dev/null; wait $tk 2>/dev/null
+[ $frc = 0 ] || { say "모델 학습 실패"; exit 1; }
+node progress.js done fit $(( $(now) - t )); say "모델 학습 완료"
 
 # 모델이나 계산 코드가 지난번과 다르면 지난 결과를 지우고 처음부터 (진행 표시 줄(PROG)만 바뀐 것은 무시)
 STAMP=$(cat "$ROOT/js/prior.js" "$ROOT/js/rollout.js" "$ROOT/js/algorithm.js" eng.js pol.js gen2.js gen4.js gen5.js genN.js fixpair.js | tr -d '
 ' | grep -v PROG | sha1sum | cut -c1-16)
-if [ -d out2 ] && [ "$(cat run.stamp 2>/dev/null)" != "$STAMP" ]; then say "모델 또는 계산 코드가 바뀌어 지난 계산 결과를 지우고 처음부터 계산합니다."; ./clean.sh >/dev/null; fi
+if [ -d out2 ] && [ "$(cat run.stamp 2>/dev/null)" != "$STAMP" ]; then say "모델 또는 계산 코드가 바뀌어 지난 계산 결과를 지우고 처음부터 계산합니다."; mv -f prog/state.json state.keep.json 2>/dev/null; ./clean.sh >/dev/null; mkdir -p prog; mv -f state.keep.json prog/state.json 2>/dev/null; node progress.js reset; fi
 echo "$STAMP" > run.stamp
 [ -f drops.json ] || echo '{}' > drops.json
 mkdir -p prog fx cmp
 # 여섯 번째 수부터의 표(OPENX6~, OPENXD)가 남아 있으면 계산 중 앱이 옛 표를 따라가므로 먼저 떼어 냄
 node -e 'const fs=require("fs"),p=process.argv[1];let s=fs.readFileSync(p,"utf8");const i=s.indexOf("/* 여섯 번째 수부터의 표");if(i>=0){fs.writeFileSync(p,s.slice(0,i).replace(/\s*$/,"\n"))}' "$R" || exit 1
 
-node progress.js start
 # step <단계> <이름> <출력 접두> <명령...> — 9쌍 병렬 실행, 이미 다 있으면 건너뜀
 step(){ local s=$1 name=$2 pre=$3 t; shift 3
  if allok "$pre"; then node progress.js done "$s"; return 0; fi
