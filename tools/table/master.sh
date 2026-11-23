@@ -132,6 +132,7 @@ node apply.js 13 "$R" || exit 1
 node -e 'const fs=require("fs"),p=process.argv[1],n=process.argv[2];fs.writeFileSync(p,fs.readFileSync(p,"utf8").replace(/(현재 표\(OPENX1~13\): )\d+판/,"$1"+n+"판"))' "$R" "$(grep -c . records.txt)"
 rm -f cmp/c.*; node runpar.js cmp cmp/c "$PAIRS" node cmp.js || { say "비교 실패"; exit 1; }
 node mkbase.js baseline.next.json || exit 1
+node revert.js "$R" || { say "손해 쌍 되돌리기 실패"; exit 1; }   # 새 표가 이전 표보다 낫지 않은 쌍은 이전 표로
 node progress.js done cmp $(( $(now) - t )); say "표 쓰기·비교 완료"
 # ── 6. 머지 전 4가지 확인 ──
 say "검증 진행중"; t=$(now)

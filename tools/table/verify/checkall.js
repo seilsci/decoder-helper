@@ -38,8 +38,9 @@ const timer=setInterval(tick,5000);
  const js=f=>path.join('tools/table',f);
  // 1. 9쌍 비교 (master.sh가 만든 cmp/c.*.json)
  {const fs_=(fs.existsSync(path.join(TB,"cmp"))?fs.readdirSync(path.join(TB,"cmp")):[]).filter(f=>/^c\.\d+\.json$/.test(f));const g=fs_.map(f=>JSON.parse(fs.readFileSync(path.join(TB,'cmp',f),'utf8')));
-  const bad=g.filter(d=>!(d.gain.pf>0&&d.gain.real>0)).map(d=>d.x);
-  R[1]={pass:g.length===9&&!bad.length,msg:g.length!==9?'cmp 결과 '+g.length+'/9쌍':bad.length?'손해 쌍 '+bad.join(','):'pf 최소 +'+Math.min(...g.map(d=>d.gain.pf)).toExponential(2)+', real 최소 +'+Math.min(...g.map(d=>d.gain.real)).toExponential(2)}}
+  // 손해 쌍은 master.sh(revert.js)가 이전 표로 되돌림(kept) → 그 쌍은 이전과 같으므로 통과로 봄
+  const kept=g.filter(d=>d.kept).map(d=>d.x),gn=g.filter(d=>!d.kept),bad=gn.filter(d=>!(d.gain.pf>0&&d.gain.real>0)).map(d=>d.x);
+  R[1]={pass:g.length===9&&!bad.length,msg:g.length!==9?'cmp 결과 '+g.length+'/9쌍':bad.length?'손해 쌍 '+bad.join(','):(gn.length?'새 표 '+gn.length+'쌍 pf 최소 +'+Math.min(...gn.map(d=>d.gain.pf)).toExponential(2)+', real 최소 +'+Math.min(...gn.map(d=>d.gain.real)).toExponential(2):'새 표 0쌍')+(kept.length?', 이전 표 유지 '+kept.join(','):'')}}
  // 2~4 병렬
  const t2=Promise.all(['chkK.js','verify/chk4.js','verify/chk5.js'].map(f=>run([js(f)]).then(r=>{const j=lastJSON(r.so);return{f:path.basename(f,'.js'),bad:j?(Array.isArray(j.bad)?j.bad.length:j.bad):'오류'}})))
   .then(a=>{R[2]={pass:a.every(x=>x.bad===0),msg:a.map(x=>x.f+' bad '+x.bad).join(', ')}});
