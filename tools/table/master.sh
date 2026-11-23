@@ -49,6 +49,13 @@ merge(){
  git -C "$ROOT" add -- "${files[@]}" || return 1
  if ! git -C "$ROOT" diff --cached --quiet; then
   git -C "$ROOT" commit -q -m "판 기록 ${N}판으로 당첨 모델과 시작 표(OPENX1-13) 다시 계산 (master.sh, 검증 통과)" || return 1; fi
+ # 실행 중에 다른 곳(클라우드 세션 등)에서 작업 브랜치에 커밋이 올라왔으면 먼저 합침(표·모델 파일을 바꾸는 커밋이면 멈춤)
+ if git fetch -q origin "$BR" 2>/dev/null && ! git merge-base --is-ancestor FETCH_HEAD HEAD; then
+  if git diff --quiet HEAD...FETCH_HEAD -- js/prior.js js/tables.js tools/table/records.txt; then
+   git merge -q --no-edit FETCH_HEAD || { git merge --abort 2>/dev/null; say "작업 브랜치의 새 커밋과 합치지 못했습니다. 스크린샷을 보내 주세요."; return 1; }
+   say "작업 브랜치에 새로 올라온 커밋을 합쳤습니다."
+  else say "작업 브랜치에 표·모델 파일을 바꾼 새 커밋이 있어 멈춥니다. 스크린샷을 보내 주세요."; return 1; fi
+ fi
  git push origin "HEAD:$BR" && git push origin HEAD:main || { say "push 실패"; return 1; }
  git fetch -q . HEAD:main 2>/dev/null || true   # 로컬 main도 같은 커밋으로
  say "main 머지·push 완료: $(git rev-parse --short HEAD)"
