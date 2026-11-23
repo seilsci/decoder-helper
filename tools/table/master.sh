@@ -73,7 +73,8 @@ node mkrec.js || exit 1
 node fitmodel.js --write || exit 1
 
 # 모델이나 계산 코드가 지난번과 다르면 지난 결과를 지우고 처음부터 (진행 표시 줄(PROG)만 바뀐 것은 무시)
-STAMP=$(cat "$ROOT/js/prior.js" "$ROOT/js/rollout.js" "$ROOT/js/algorithm.js" eng.js pol.js gen2.js gen4.js gen5.js genN.js fixpair.js | tr -d '' | grep -v PROG | sha1sum | cut -c1-16)
+STAMP=$(cat "$ROOT/js/prior.js" "$ROOT/js/rollout.js" "$ROOT/js/algorithm.js" eng.js pol.js gen2.js gen4.js gen5.js genN.js fixpair.js | tr -d '
+' | grep -v PROG | sha1sum | cut -c1-16)
 if [ -d out2 ] && [ "$(cat run.stamp 2>/dev/null)" != "$STAMP" ]; then say "모델 또는 계산 코드가 바뀌어 지난 계산 결과를 지우고 처음부터 계산합니다."; ./clean.sh >/dev/null; fi
 echo "$STAMP" > run.stamp
 [ -f drops.json ] || echo '{}' > drops.json
@@ -122,7 +123,9 @@ node mkbase.js baseline.next.json || exit 1
 node progress.js done cmp $(( $(now) - t )); say "표 쓰기·비교 완료"
 # ── 6. 머지 전 4가지 확인 ──
 say "검증 진행중"; t=$(now)
+( while sleep 60; do node progress.js tick verify; done ) & tk=$!   # 검증 중에도 1분마다 진행 줄 갱신
 node verify/checkall.js; vrc=$?
+kill $tk 2>/dev/null; wait $tk 2>/dev/null
 node progress.js done verify $(( $(now) - t )); say "검증 완료"
 node progress.js save >/dev/null
 echo MASTER_DONE
