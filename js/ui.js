@@ -9,7 +9,7 @@ const LPG=18; /* 한 페이지 개수: 기존 언어 18개가 1페이지, 추가
 const REC_URL='https://script.google.com/macros/s/AKfycbw_6H2IjYti4RM224PFnpQDknAGaF9g0Rjkel9GvOr---5WEJZzPMIOpIhhqGJShp1QqA/exec';
 const REC_MIN_MS=10000;
 /* 기록에 함께 보내는 것: 사용 버전(학습 판 수-코드 날짜), 기기 ID(이 브라우저에 저장한 무작위 6자), IP 코드(IP를 해시한 짧은 값, IP 원본은 보내지 않음) */
-const APP_REV='1126'; /* 화면·기록 코드를 고칠 때마다 올리는 네 자리 번호(대략 MMDD). 바뀌면 열린 페이지가 자동으로 새 버전을 받음 */
+const APP_REV='0001'; /* 화면·기록 코드를 고칠 때마다 올리는 네 자리 번호(Apps Script가 숫자 네 자리만 받음. 새 시즌/갱신은 0001부터, 이후 0002…). 바뀌면 열린 페이지가 자동으로 새 버전을 받음 */
 const APP_VER=(typeof PRIOR_EXPO!=='undefined'?Math.max(...PRIOR_EXPO):0)+'-'+APP_REV; /* 예: 481-1122 (master.sh가 모델을 다시 맞추면 앞 숫자가 자동으로 바뀜) */
 const DEV_ID=(()=>{try{let v=localStorage.getItem('dh_dev');if(!v){v=Math.random().toString(36).slice(2,8);localStorage.setItem('dh_dev',v)}return v}catch(e){return ''}})();
 let IP_CODE='',CC='';
